@@ -26,54 +26,107 @@
         </header>
 
         <div class="info-box">
-            <p><strong>Data Period:</strong> 2015-2025 (current year shows partial data)</p>
-            <p><strong>Left Charts:</strong> Absolute production in GWh | <strong>Right Charts:</strong> Percentage of total generation</p>
+            <p><strong>Select an energy source below</strong> to view its monthly production trends</p>
+            <p><strong>Left Charts:</strong> Absolute production in TWh | <strong>Right Charts:</strong> Percentage of total generation</p>
         </div>
 
-        <div class="chart-section">
-            <div class="chart-container">
-                <h2>Solar Energy Production</h2>
-                <img src="plots/eu_monthly_solar_combined_10years.png" 
-                     alt="Monthly Solar Production Trends" 
-                     class="chart-img">
-                <p class="chart-caption">Showing strong seasonal variation with peak production in summer months and steady growth year-over-year</p>
-            </div>
-
-            <div class="chart-container">
-                <h2>Wind Energy Production</h2>
-                <img src="plots/eu_monthly_wind_total_combined_10years.png" 
-                     alt="Monthly Wind Production Trends" 
-                     class="chart-img">
-                <p class="chart-caption">Peak production typically in winter months with significant year-to-year growth</p>
-            </div>
-
-            <div class="chart-container">
-                <h2>Hydro Energy Production</h2>
-                <img src="plots/eu_monthly_hydro_combined_10years.png" 
-                     alt="Monthly Hydro Production Trends" 
-                     class="chart-img">
-                <p class="chart-caption">Seasonal patterns influenced by precipitation and snowmelt, with variations across years</p>
-            </div>
-
-            <div class="chart-container">
-                <h2>Total Renewable Energy Production</h2>
-                <img src="plots/eu_monthly_total_renewable_combined_10years.png" 
-                     alt="Monthly Total Renewable Production Trends" 
-                     class="chart-img">
-                <p class="chart-caption">Combined renewable energy showing steady increase in both absolute production and percentage of total generation</p>
-            </div>
+        <!-- DROPDOWN SELECTOR -->
+        <div class="chart-selector">
+            <label for="monthly-select">Choose Energy Source:</label>
+            <select id="monthly-select" onchange="showMonthlyChart(this.value)">
+                <option value="solar" selected>Solar Energy</option>
+                <option value="wind">Wind Energy</option>
+                <option value="hydro">Hydro Energy</option>
+                <option value="renewable">Total Renewable Energy</option>
+            </select>
         </div>
 
-        <div class="insights-box">
-            <h3>Key Insights</h3>
-            <ul>
-                <li>Solar production shows strong seasonality with 3-4x variation between summer and winter</li>
-                <li>Wind production is counter-seasonal to solar, with higher output in winter months</li>
-                <li>Combined renewables benefit from this complementary seasonal pattern</li>
-                <li>Renewable percentage of total generation has grown significantly across all months</li>
-            </ul>
+        <!-- DYNAMIC CHART DISPLAY -->
+        <div id="monthly-chart-display" class="chart-container">
+            <!-- Chart will be loaded here by JavaScript -->
+        </div>
+
+        <!-- INSIGHTS BOX (updates based on selected chart) -->
+        <div id="monthly-insights-box" class="insights-box">
+            <!-- Insights will be loaded here by JavaScript -->
         </div>
     </div>
+
+    <script>
+        // Monthly chart configurations
+        const monthlyCharts = {
+            'solar': {
+                image: 'plots/eu_monthly_solar_combined_10years.png',
+                title: 'Solar Energy Production',
+                insights: [
+                    'Solar production shows strong seasonality with 3-4x variation between summer and winter',
+                    'Steady year-over-year growth in both absolute production and percentage of total generation',
+                    'Peak production occurs in May-August across all years',
+                    'Recent years show dramatic increases in both capacity and output'
+                ]
+            },
+            'wind': {
+                image: 'plots/eu_monthly_wind_total_combined_10years.png',
+                title: 'Wind Energy Production',
+                insights: [
+                    'Peak production typically in winter months (November-February)',
+                    'Counter-seasonal to solar, providing complementary renewable generation',
+                    'Significant year-to-year growth driven by offshore wind expansion',
+                    'More variable than solar due to weather patterns'
+                ]
+            },
+            'hydro': {
+                image: 'plots/eu_monthly_hydro_combined_10years.png',
+                title: 'Hydro Energy Production',
+                insights: [
+                    'Seasonal patterns influenced by precipitation and snowmelt',
+                    'Spring peaks (April-June) due to snowmelt in Alpine regions',
+                    'Relatively stable compared to wind and solar',
+                    'Variations across years reflect drought conditions and water availability'
+                ]
+            },
+            'renewable': {
+                image: 'plots/eu_monthly_total_renewable_combined_10years.png',
+                title: 'Total Renewable Energy Production',
+                insights: [
+                    'Combined renewables benefit from complementary seasonal patterns',
+                    'Steady increase in both absolute production and percentage of total generation',
+                    'Renewable percentage has grown significantly across all months',
+                    'Many months now approaching or exceeding 50% renewable generation'
+                ]
+            }
+        };
+
+        // Show monthly chart function
+        function showMonthlyChart(chartId) {
+            const chart = monthlyCharts[chartId];
+            const display = document.getElementById('monthly-chart-display');
+            const insights = document.getElementById('monthly-insights-box');
+
+            // Update chart display
+            display.innerHTML = `
+                <h2>${chart.title}</h2>
+                <img src="${chart.image}" alt="${chart.title}" class="chart-img">
+                <p class="chart-caption">Showing strong seasonal variation with year-over-year trends</p>
+            `;
+
+            // Update insights
+            insights.innerHTML = `
+                <h3>Key Insights</h3>
+                <ul>
+                    ${chart.insights.map(insight => `<li>${insight}</li>`).join('')}
+                </ul>
+            `;
+
+            // Scroll to chart
+            display.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // Load default chart on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            showMonthlyChart('solar');
+        });
+    </script>
 
     <footer>
         <p>Built with data from <a href="https://transparency.entsoe.eu/" target="_blank">ENTSO-E</a> | 
