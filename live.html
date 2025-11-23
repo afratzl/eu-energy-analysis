@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Intraday - EU Energy Analysis</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <span class="nav-title">EU Energy Analysis</span>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="live.html" class="active">Live</a>
+                <a href="monthly.html">Monthly</a>
+                <a href="trends.html">Trends</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <header class="page-header">
+            <h1>Live Intraday Analysis</h1>
+            <p class="subtitle">15-minute resolution | Today vs Yesterday vs Historical</p>
+        </header>
+
+        <div class="info-box">
+            <p><strong>Updates:</strong> Every hour on GitHub Actions</p>
+            <p><strong>Resolution:</strong> 15-minute intervals with 2-hour data quality cutoff</p>
+            <p><strong>Note:</strong> Dashed lines show projected production including unreported countries</p>
+        </div>
+
+        <div class="chart-section">
+            <div class="chart-container">
+                <h2>Wind Energy Production</h2>
+                <img src="plots/wind_analysis.png" 
+                     alt="Wind Energy Intraday Analysis" 
+                     class="chart-img">
+                <p class="chart-caption">Current day (solid) compared to yesterday and historical averages (dashed projections include missing countries)</p>
+            </div>
+
+            <div class="chart-container">
+                <h2>Solar Energy Production</h2>
+                <img src="plots/solar_analysis.png" 
+                     alt="Solar Energy Intraday Analysis" 
+                     class="chart-img">
+                <p class="chart-caption">Current day (solid) compared to yesterday and historical averages (dashed projections include missing countries)</p>
+            </div>
+
+            <div class="chart-container">
+                <h2>Total Renewable Energy Production</h2>
+                <img src="plots/renewable_analysis.png" 
+                     alt="Renewable Energy Intraday Analysis" 
+                     class="chart-img">
+                <p class="chart-caption">Current day (solid) compared to yesterday and historical averages (dashed projections include missing countries)</p>
+            </div>
+        </div>
+
+        <div class="technical-note">
+            <h3>Technical Notes</h3>
+            <ul>
+                <li><strong>Data Source:</strong> ENTSO-E Transparency Platform API</li>
+                <li><strong>Coverage:</strong> All EU member states (projection system handles unreported countries)</li>
+                <li><strong>Time Zone:</strong> All data displayed in Europe/Brussels (CET/CEST)</li>
+                <li><strong>Units:</strong> Gigawatts (GW) for improved readability</li>
+                <li><strong>Projection System:</strong> Dashed lines estimate total production including countries with missing data</li>
+            </ul>
+        </div>
+    </div>
+
+    <footer>
+        <p>Built with data from <a href="https://transparency.entsoe.eu/" target="_blank">ENTSO-E</a> | 
+           Source code on <a href="https://github.com/afratzl/eu-energy-analysis" target="_blank">GitHub</a></p>
+    </footer>
+</body>
+</html>
