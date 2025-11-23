@@ -21,7 +21,7 @@ energy_sources = {
     'Solar': ['Solar'],
     'Wind Onshore': ['Wind Onshore'],
     'Wind Offshore': ['Wind Offshore'],
-    'Wind Total': ['Wind Onshore', 'Wind Offshore'],
+    'Wind': ['Wind Onshore', 'Wind Offshore'],
     'Hydro': [
         'Hydro', 'Hydro Water Reservoir', 'Hydro Run-of-river', 'Hydro Pumped Storage',
         'Water Reservoir', 'Run-of-river', 'Poundage', 'Hydro Run-of-river and poundage'
