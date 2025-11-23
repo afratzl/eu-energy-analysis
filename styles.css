@@ -1,0 +1,351 @@
+/* ============================================
+   EU ENERGY ANALYSIS - SHARED STYLES
+   Light theme, mobile-responsive design
+   ============================================ */
+
+/* === RESET & BASE === */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background-color: #f8f9fa;
+}
+
+/* === NAVIGATION BAR === */
+.navbar {
+    background-color: #ffffff;
+    border-bottom: 2px solid #e0e0e0;
+    padding: 1rem 0;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.nav-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.nav-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+.nav-links {
+    display: flex;
+    gap: 2rem;
+}
+
+.nav-links a {
+    text-decoration: none;
+    color: #555;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.nav-links a:hover {
+    background-color: #e8f4f8;
+    color: #2c3e50;
+}
+
+.nav-links a.active {
+    background-color: #3498db;
+    color: white;
+}
+
+/* === CONTAINER === */
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+/* === PAGE HEADER === */
+.page-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.page-header h1 {
+    font-size: 2.5rem;
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+}
+
+.subtitle {
+    font-size: 1.1rem;
+    color: #666;
+    font-weight: 400;
+}
+
+/* === INFO BOX === */
+.info-box {
+    background-color: #e8f4f8;
+    border-left: 4px solid #3498db;
+    padding: 1rem 1.5rem;
+    margin-bottom: 2rem;
+    border-radius: 4px;
+}
+
+.info-box p {
+    margin: 0.3rem 0;
+    color: #555;
+}
+
+/* === NAVIGATION GRID (Home page) === */
+.nav-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin: 3rem 0;
+}
+
+.nav-card {
+    background-color: white;
+    border-radius: 8px;
+    padding: 2rem;
+    text-decoration: none;
+    color: inherit;
+    border: 2px solid #e0e0e0;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.nav-card:hover {
+    border-color: #3498db;
+    box-shadow: 0 4px 12px rgba(52, 152, 219, 0.2);
+    transform: translateY(-2px);
+}
+
+.card-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.nav-card h2 {
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+    font-size: 1.5rem;
+}
+
+.nav-card p {
+    color: #666;
+    margin-bottom: 1rem;
+}
+
+.update-badge {
+    display: inline-block;
+    background-color: #e8f4f8;
+    color: #3498db;
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+/* === FEATURE CHART (Home page) === */
+.feature-chart {
+    background-color: white;
+    border-radius: 8px;
+    padding: 2rem;
+    margin: 3rem 0;
+    border: 2px solid #e0e0e0;
+}
+
+.feature-chart h2 {
+    color: #2c3e50;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+/* === CHART SECTIONS === */
+.chart-section {
+    margin: 2rem 0;
+}
+
+.chart-container {
+    background-color: white;
+    border-radius: 8px;
+    padding: 2rem;
+    margin-bottom: 3rem;
+    border: 2px solid #e0e0e0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.chart-container h2,
+.chart-container h3 {
+    color: #2c3e50;
+    margin-bottom: 1rem;
+}
+
+.chart-img {
+    width: 100%;
+    height: auto;
+    display: block;
+    margin: 1rem 0;
+    border-radius: 4px;
+}
+
+.chart-caption {
+    color: #666;
+    font-size: 0.95rem;
+    font-style: italic;
+    margin-top: 1rem;
+    text-align: center;
+}
+
+/* === TRENDS PAGE SECTIONS === */
+.trends-section {
+    margin: 3rem 0;
+}
+
+.section-title {
+    color: #2c3e50;
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 3px solid #3498db;
+}
+
+.section-description {
+    color: #666;
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+}
+
+/* === INSIGHTS BOX === */
+.insights-box,
+.technical-note {
+    background-color: #fff3cd;
+    border-left: 4px solid #ffc107;
+    padding: 1.5rem;
+    margin: 2rem 0;
+    border-radius: 4px;
+}
+
+.insights-box h3,
+.technical-note h3 {
+    color: #2c3e50;
+    margin-bottom: 1rem;
+}
+
+.insights-box ul,
+.technical-note ul {
+    margin-left: 1.5rem;
+    color: #555;
+}
+
+.insights-box li,
+.technical-note li {
+    margin: 0.5rem 0;
+}
+
+/* === FOOTER === */
+footer {
+    background-color: #2c3e50;
+    color: white;
+    text-align: center;
+    padding: 2rem;
+    margin-top: 4rem;
+}
+
+footer a {
+    color: #3498db;
+    text-decoration: none;
+}
+
+footer a:hover {
+    text-decoration: underline;
+}
+
+/* === MOBILE RESPONSIVE === */
+@media (max-width: 768px) {
+    .nav-container {
+        flex-direction: column;
+        gap: 1rem;
+        padding: 0 1rem;
+    }
+
+    .nav-links {
+        gap: 1rem;
+    }
+
+    .nav-links a {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.9rem;
+    }
+
+    .nav-title {
+        font-size: 1.2rem;
+    }
+
+    .container {
+        padding: 1rem;
+    }
+
+    .page-header h1 {
+        font-size: 1.8rem;
+    }
+
+    .subtitle {
+        font-size: 1rem;
+    }
+
+    .nav-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+
+    .nav-card {
+        padding: 1.5rem;
+    }
+
+    .card-icon {
+        font-size: 2.5rem;
+    }
+
+    .chart-container {
+        padding: 1rem;
+    }
+
+    .section-title {
+        font-size: 1.5rem;
+    }
+
+    .info-box,
+    .insights-box,
+    .technical-note {
+        padding: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .nav-links {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .nav-links a {
+        padding: 0.3rem 0.6rem;
+        font-size: 0.85rem;
+    }
+
+    .page-header h1 {
+        font-size: 1.5rem;
+    }
+}
