@@ -1,19 +1,26 @@
 #!/usr/bin/env python3
 """
-Unified Intraday Energy Analysis Script
+Unified Intraday Energy Analysis Script - FIXED VERSION
 Analyzes any energy source for EU countries with 15-minute resolution
 """
 
 from entsoe import EntsoePandasClient
 import pandas as pd
+import matplotlib
+matplotlib.use('Agg')  # Non-interactive backend
 import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-from datetime import datetime, timedelta
-import pytz
 import numpy as np
+from datetime import datetime, timedelta
+import warnings
 import os
 import sys
 import argparse
+import time
+
+warnings.filterwarnings('ignore')
+
+# Create plots directory
+os.makedirs('plots', exist_ok=True)
 
 # EU country codes
 EU_COUNTRIES = [
@@ -64,83 +71,127 @@ DISPLAY_NAMES = {
 }
 
 
-def interpolate_country_data(country_data, country, mark_extrapolated=False):
+def get_intraday_data_for_country(client, country, start_date, end_date, max_retries=3):
     """
-    Interpolate country data to 15-minute resolution with proper timezone handling
+    Get intraday generation data for a specific country with retry logic
     """
-    if country_data.empty:
-        return country_data
-    
-    # Ensure timezone
-    if country_data.index.tz is None:
-        country_data.index = country_data.index.tz_localize('Europe/Brussels')
+    start = pd.Timestamp(start_date, tz='Europe/Brussels')
+    end = pd.Timestamp(end_date, tz='Europe/Brussels') + timedelta(hours=1)
+
+    for attempt in range(max_retries):
+        try:
+            data = client.query_generation(country, start=start, end=end)
+
+            if data.empty:
+                return pd.DataFrame()
+
+            # Convert to Brussels timezone
+            if data.index.tz is None:
+                data.index = data.index.tz_localize('UTC').tz_convert('Europe/Brussels')
+            elif str(data.index.tz) != 'Europe/Brussels':
+                data.index = data.index.tz_convert('Europe/Brussels')
+
+            time.sleep(0.2)  # Rate limiting protection
+            return data
+
+        except Exception as e:
+            if attempt < max_retries - 1:
+                wait_time = 0.5 * (2 ** attempt)
+                print(f"  Retry {country} (attempt {attempt + 1}/{max_retries})...")
+                time.sleep(wait_time)
+            else:
+                time.sleep(0.5)
+                return pd.DataFrame()
+
+    return pd.DataFrame()
+
+
+def extract_source_from_generation_data(generation_data, source_keywords):
+    """
+    Extract specific energy source data using keyword matching
+    Copied from working wind_analysis.py logic
+    """
+    relevant_columns = []
+    for keyword in source_keywords:
+        matching_cols = [col for col in generation_data.columns if keyword in col]
+        relevant_columns.extend(matching_cols)
+    relevant_columns = list(set(relevant_columns))
+
+    if relevant_columns:
+        if len(relevant_columns) == 1:
+            energy_series = generation_data[relevant_columns[0]]
+        else:
+            energy_series = generation_data[relevant_columns].sum(axis=1)
+        return energy_series, relevant_columns
     else:
-        country_data.index = country_data.index.tz_convert('Europe/Brussels')
-    
-    # Create 15-minute index
-    start_time = country_data.index.min().floor('H')
-    end_time = country_data.index.max().ceil('H') + timedelta(hours=1)
-    
-    freq_15min = pd.date_range(start=start_time, end=end_time, freq='15min', tz='Europe/Brussels')
-    
-    # Reindex
-    interpolated = country_data.reindex(freq_15min)
-    
-    # Mark original data points
-    if mark_extrapolated:
-        interpolated['is_original'] = interpolated.index.isin(country_data.index)
-    
-    # Interpolate using cubic method (requires scipy)
-    try:
+        return pd.Series(0, index=generation_data.index), []
+
+
+def interpolate_country_data(country_series, country_name, mark_extrapolated=False):
+    """
+    Interpolate to 15-minute resolution
+    Copied from working wind_analysis.py
+    """
+    if len(country_series) == 0:
+        return None
+
+    time_diffs = country_series.index.to_series().diff().dt.total_seconds() / 60
+    most_common_interval = time_diffs.mode().iloc[0] if not time_diffs.mode().empty else 15
+
+    start_time = country_series.index.min().floor('15T')
+    end_time = country_series.index.max().ceil('15T')
+    complete_index = pd.date_range(start_time, end_time, freq='15T')
+
+    last_actual_time = country_series.index.max() if mark_extrapolated else None
+
+    if most_common_interval >= 45:  # Hourly data
+        interpolated = country_series.reindex(complete_index)
         interpolated = interpolated.interpolate(method='cubic', limit_area='inside')
-    except:
-        # Fallback to linear if scipy not available
-        interpolated = interpolated.interpolate(method='linear', limit_area='inside')
-    
-    # Filter to remove overflow timestamps (next day 00:00+)
-    max_time = country_data.index.max()
-    if max_time.hour == 23 and max_time.minute >= 45:
-        max_allowed = max_time.floor('D') + timedelta(days=1)
-        interpolated = interpolated[interpolated.index < max_allowed]
-    
+        interpolated = interpolated.fillna(method='ffill').fillna(method='bfill')
+
+        if mark_extrapolated:
+            mask = complete_index > last_actual_time
+            interpolated.loc[mask] = np.nan
+    else:  # Already 15-min
+        interpolated = country_series.reindex(complete_index)
+        interpolated = interpolated.interpolate(method='linear').fillna(method='ffill').fillna(method='bfill')
+
+        if mark_extrapolated:
+            mask = complete_index > last_actual_time
+            interpolated.loc[mask] = np.nan
+
     return interpolated
 
 
-def aggregate_eu_data(country_data_dict, source_type, mark_extrapolated=False):
+def aggregate_eu_data(client, countries, start_date, end_date, source_keywords, mark_extrapolated=False):
     """
-    Aggregate and interpolate EU data from all countries
+    Aggregate energy data across EU countries
+    Adapted from working wind_analysis.py
     """
-    all_country_series = []
-    countries_with_data = []
-    
-    for country, country_data in country_data_dict.items():
-        if country_data is not None and not country_data.empty:
-            interpolated = interpolate_country_data(country_data, country, mark_extrapolated)
-            
-            if not interpolated.empty:
-                # Sum columns if multiple
-                if isinstance(interpolated, pd.DataFrame):
-                    country_series = interpolated.sum(axis=1)
-                else:
-                    country_series = interpolated
-                
-                all_country_series.append(country_series)
-                countries_with_data.append(country)
-    
-    if not all_country_series:
-        return pd.Series(dtype=float), {}, []
-    
-    # Combine all countries
-    combined_df = pd.concat(all_country_series, axis=1)
-    combined_df.columns = countries_with_data
-    
-    # Sum across countries
-    eu_total = combined_df.sum(axis=1)
-    
-    # Store individual country data
-    country_dict = {country: combined_df[country] for country in countries_with_data}
-    
-    return eu_total, country_dict, countries_with_data
+    all_interpolated_data = []
+    successful_countries = []
+
+    for country in countries:
+        country_data = get_intraday_data_for_country(client, country, start_date, end_date)
+
+        if not country_data.empty:
+            country_energy, energy_columns = extract_source_from_generation_data(country_data, source_keywords)
+
+            if energy_columns:  # Only process if columns found
+                country_energy.name = country
+                interpolated = interpolate_country_data(country_energy, country, mark_extrapolated=mark_extrapolated)
+
+                if interpolated is not None:
+                    all_interpolated_data.append(interpolated)
+                    successful_countries.append(country)
+
+    if not all_interpolated_data:
+        return pd.Series(dtype=float), pd.DataFrame(), []
+
+    combined_df = pd.concat(all_interpolated_data, axis=1)
+    eu_total = combined_df.sum(axis=1, skipna=True)
+
+    return eu_total, combined_df, successful_countries
 
 
 def load_intraday_data(source_type, api_key):
@@ -149,192 +200,238 @@ def load_intraday_data(source_type, api_key):
     """
     client = EntsoePandasClient(api_key=api_key)
     
-    # Define time ranges
-    brussels_tz = pytz.timezone('Europe/Brussels')
-    now = datetime.now(brussels_tz)
-    
-    # Today: from 00:00 to now+1h
-    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    today_end = now + timedelta(hours=1)
-    
-    # Yesterday: full day
-    yesterday_start = today_start - timedelta(days=1)
-    yesterday_end = today_start
-    
-    # Historical: same day of week, last 4 weeks
-    historical_starts = [today_start - timedelta(weeks=i) for i in range(1, 5)]
-    
-    print(f"\nTODAY: {today_start.date()} to {today_end.date()}")
-    
     # Get source keywords
-    source_keywords = ENERGY_SOURCE_MAPPING.get(source_type, [])
+    source_keywords = ENERGY_SOURCE_MAPPING.get(source_type)
     if not source_keywords:
         raise ValueError(f"Unknown source type: {source_type}")
     
-    # Query all countries
-    def query_country_period(country, start, end, period_name):
-        try:
-            data = client.query_generation(country, start=start, end=end)
-            
-            if data.empty:
-                return None
-            
-            # Filter for relevant columns
-            relevant_cols = []
-            for keyword in source_keywords:
-                matching = [col for col in data.columns if keyword in col]
-                relevant_cols.extend(matching)
-            
-            relevant_cols = list(set(relevant_cols))
-            
-            if not relevant_cols:
-                return None
-            
-            if len(relevant_cols) == 1:
-                return data[relevant_cols[0]]
-            else:
-                return data[relevant_cols].sum(axis=1)
-                
-        except Exception as e:
-            return None
+    print(f"\nSource keywords: {source_keywords}")
     
-    # Query today
-    print("Loading today's data...")
-    today_data = {}
-    for country in EU_COUNTRIES:
-        today_data[country] = query_country_period(country, today_start, today_end, "today")
+    # Define time ranges
+    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    yesterday = today - timedelta(days=1)
     
-    # Query yesterday
-    print("Loading yesterday's data...")
-    yesterday_data = {}
-    for country in EU_COUNTRIES:
-        yesterday_data[country] = query_country_period(country, yesterday_start, yesterday_end, "yesterday")
+    week_ago_end = yesterday
+    week_ago_start = week_ago_end - timedelta(days=7)
     
-    # Query historical
-    print("Loading historical data...")
-    historical_data_list = []
-    for i, hist_start in enumerate(historical_starts):
-        hist_end = hist_start + timedelta(days=1)
-        hist_data = {}
-        for country in EU_COUNTRIES:
-            hist_data[country] = query_country_period(country, hist_start, hist_end, f"hist_{i}")
-        historical_data_list.append(hist_data)
-    
-    # Aggregate
-    today_eu, today_by_country, today_countries = aggregate_eu_data(today_data, source_type, mark_extrapolated=False)
-    yesterday_eu, yesterday_by_country, yesterday_countries = aggregate_eu_data(yesterday_data, source_type)
-    
-    historical_eu_list = []
-    for hist_data in historical_data_list:
-        hist_eu, _, _ = aggregate_eu_data(hist_data, source_type)
-        historical_eu_list.append(hist_eu)
-    
-    # Calculate projection (estimate for countries not reporting)
-    all_countries_set = set(EU_COUNTRIES)
-    reporting_countries = set(today_countries)
-    missing_countries = all_countries_set - reporting_countries
-    
-    if missing_countries and reporting_countries:
-        # Use historical average to estimate missing
-        reporting_total = today_eu
-        # Simple projection: scale up proportionally
-        projection_factor = len(all_countries_set) / len(reporting_countries)
-        today_projected = reporting_total * projection_factor
-    else:
-        today_projected = today_eu
-    
-    return {
-        'today': today_eu,
-        'today_projected': today_projected,
-        'yesterday': yesterday_eu,
-        'historical': historical_eu_list,
-        'today_countries': today_countries,
-        'missing_countries': list(missing_countries)
+    periods = {
+        'today': (today, today + timedelta(days=1)),
+        'yesterday': (yesterday, yesterday + timedelta(days=1)),
+        'week_ago': (week_ago_start, week_ago_end)
     }
+    
+    all_data = {}
+    all_country_data = {}
+    
+    for period_name, (start_date, end_date) in periods.items():
+        print(f"\n{period_name.upper()}: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+        
+        mark_extrap = (period_name in ['today', 'yesterday'])
+        
+        energy_data, energy_by_country, energy_countries = aggregate_eu_data(
+            client, EU_COUNTRIES, start_date, end_date, source_keywords, mark_extrapolated=mark_extrap
+        )
+        
+        if not energy_data.empty:
+            all_data[period_name] = energy_data
+            all_country_data[period_name] = energy_by_country
+            
+            avg_value = energy_data.mean() / 1000  # Convert to GW
+            print(f"  ✓ {len(energy_data)} points, avg: {avg_value:.1f} GW")
+            print(f"  ✓ {len(energy_countries)}/{len(EU_COUNTRIES)} countries reporting")
+        else:
+            print(f"  ✗ No data")
+    
+    # Calculate projected values for missing countries
+    if 'today' in all_data and 'week_ago' in all_country_data:
+        print("\nCreating projected values for TODAY...")
+        all_data['today_projected'] = create_projected_data(
+            all_data['today'],
+            all_country_data.get('today', pd.DataFrame()),
+            all_country_data.get('week_ago', pd.DataFrame()),
+            'today'
+        )
+    
+    if 'yesterday' in all_data and 'week_ago' in all_country_data:
+        print("Creating projected values for YESTERDAY...")
+        all_data['yesterday_projected'] = create_projected_data(
+            all_data['yesterday'],
+            all_country_data.get('yesterday', pd.DataFrame()),
+            all_country_data.get('week_ago', pd.DataFrame()),
+            'yesterday'
+        )
+    
+    return all_data, all_country_data
 
 
-def create_intraday_plot(data, source_type, output_file):
+def create_projected_data(actual_series, actual_countries, week_ago_countries, period_name='today'):
+    """
+    Create projected values by filling missing country data with week_ago averages
+    """
+    if actual_countries.empty or week_ago_countries.empty:
+        return actual_series
+    
+    print(f"  Creating projected data for {period_name}...")
+    
+    week_ago_countries_with_time = week_ago_countries.copy()
+    week_ago_countries_with_time['time'] = week_ago_countries_with_time.index.strftime('%H:%M')
+    week_ago_avg = week_ago_countries_with_time.groupby('time').mean(numeric_only=True)
+    
+    # Find missing countries
+    week_ago_list = set(week_ago_countries.columns)
+    today_list = set(actual_countries.columns)
+    completely_missing = week_ago_list - today_list
+    
+    if completely_missing:
+        print(f"  Missing countries: {', '.join(sorted(completely_missing))}")
+    
+    # Create projected series by adding weekly averages for missing countries
+    projected_series = actual_series.copy()
+    
+    for timestamp in projected_series.index:
+        time_str = timestamp.strftime('%H:%M')
+        
+        if time_str in week_ago_avg.index:
+            additional_power = 0
+            for country in completely_missing:
+                if country in week_ago_avg.columns:
+                    val = week_ago_avg.loc[time_str, country]
+                    if not pd.isna(val):
+                        additional_power += val
+            
+            projected_series.loc[timestamp] += additional_power
+    
+    return projected_series
+
+
+def create_intraday_plot(all_data, all_country_data, source_type, output_file):
     """
     Create intraday comparison plot
     """
     source_name = DISPLAY_NAMES.get(source_type, source_type.capitalize())
     
-    fig, ax = plt.subplots(figsize=(16, 9))
+    fig, ax = plt.subplots(figsize=(20, 9))
     
-    # Apply 2-hour cutoff for data quality
-    cutoff_time = datetime.now(pytz.timezone('Europe/Brussels')) - timedelta(hours=2)
+    colors = {
+        'today': '#FF4444',
+        'yesterday': '#FF8800',
+        'week_ago': '#4444FF',
+        'today_projected': '#FF4444',
+        'yesterday_projected': '#FF8800'
+    }
     
-    # Plot today (actual data)
-    today_data = data['today']
-    if not today_data.empty:
-        valid_today = today_data[today_data.index <= cutoff_time]
-        if not valid_today.empty:
-            ax.plot(valid_today.index, valid_today / 1000, 
-                   label='Today (Actual)', color='#2E86AB', linewidth=2.5, zorder=3)
+    linestyles = {
+        'today': '-',
+        'yesterday': '-',
+        'week_ago': '-',
+        'today_projected': '--',
+        'yesterday_projected': '--'
+    }
     
-    # Plot today projected (dashed)
-    today_projected = data['today_projected']
-    if not today_projected.empty:
-        valid_proj = today_projected[today_projected.index <= cutoff_time]
-        if not valid_proj.empty:
-            ax.plot(valid_proj.index, valid_proj / 1000,
-                   label='Today (Projected)', color='#2E86AB', linewidth=2.5, 
-                   linestyle='--', alpha=0.7, zorder=2)
+    labels = {
+        'today': 'Today',
+        'yesterday': 'Yesterday',
+        'week_ago': 'Previous Week (avg)',
+        'today_projected': 'Today (Projected)',
+        'yesterday_projected': 'Yesterday (Projected)'
+    }
     
-    # Plot yesterday
-    yesterday_data = data['yesterday']
-    if not yesterday_data.empty:
-        # Shift yesterday's index to today's date for comparison
-        today_date = datetime.now(pytz.timezone('Europe/Brussels')).date()
-        yesterday_shifted_index = yesterday_data.index.map(
-            lambda x: x.replace(year=today_date.year, month=today_date.month, day=today_date.day)
-        )
-        ax.plot(yesterday_shifted_index, yesterday_data / 1000,
-               label='Yesterday', color='#A23B72', linewidth=2, alpha=0.7, zorder=2)
+    # Plot order
+    plot_order = ['week_ago', 'yesterday', 'today', 'yesterday_projected', 'today_projected']
     
-    # Plot historical average
-    if data['historical']:
-        historical_dfs = [hist for hist in data['historical'] if not hist.empty]
-        if historical_dfs:
-            # Align and average
-            combined_hist = pd.concat(historical_dfs, axis=1)
-            hist_avg = combined_hist.mean(axis=1)
+    # Create time axis (15-minute bins for 24 hours)
+    time_labels = []
+    for hour in range(24):
+        for minute in [0, 15, 30, 45]:
+            time_labels.append(f"{hour:02d}:{minute:02d}")
+    
+    # Cutoff time (2 hours ago)
+    cutoff_time = pd.Timestamp.now(tz='Europe/Brussels') - timedelta(hours=2)
+    cutoff_time = cutoff_time.floor('15T')
+    
+    max_power = 0
+    
+    for period_name in plot_order:
+        if period_name not in all_data:
+            continue
+        
+        data_series = all_data[period_name]
+        if data_series.empty:
+            continue
+        
+        # Group by time of day
+        data_with_time = pd.DataFrame({'power': data_series})
+        data_with_time['time'] = data_with_time.index.strftime('%H:%M')
+        time_indexed = data_with_time.groupby('time')['power'].mean()
+        
+        # Align to standard times
+        aligned = time_indexed.reindex(time_labels).interpolate()
+        aligned = aligned.fillna(method='ffill').fillna(method='bfill').fillna(0)
+        
+        # Apply cutoff for today/projected
+        if period_name in ['today', 'today_projected']:
+            cutoff_time_str = cutoff_time.strftime('%H:%M')
+            try:
+                cutoff_idx = time_labels.index(cutoff_time_str)
+            except ValueError:
+                cutoff_idx = len([t for t in time_labels if t <= cutoff_time_str])
             
-            # Shift to today's date
-            today_date = datetime.now(pytz.timezone('Europe/Brussels')).date()
-            hist_shifted_index = hist_avg.index.map(
-                lambda x: x.replace(year=today_date.year, month=today_date.month, day=today_date.day)
-            )
-            ax.plot(hist_shifted_index, hist_avg / 1000,
-                   label='Historical Avg (4 weeks)', color='#8B8B8B', 
-                   linewidth=1.5, alpha=0.6, zorder=1)
+            # Keep data up to cutoff, NaN after
+            x_values = np.arange(cutoff_idx)
+            y_values = aligned.iloc[:cutoff_idx].values / 1000  # Convert to GW
+        else:
+            x_values = np.arange(len(aligned))
+            y_values = aligned.values / 1000  # Convert to GW
+        
+        if len(y_values) > 0:
+            max_power = max(max_power, np.nanmax(y_values))
+            
+            ax.plot(x_values, y_values,
+                   color=colors[period_name],
+                   linestyle=linestyles[period_name],
+                   linewidth=3 if period_name in ['today', 'today_projected'] else 2,
+                   label=labels[period_name],
+                   alpha=0.7 if 'projected' in period_name else 1.0)
     
     # Formatting
-    ax.set_xlabel('Time (CET/CEST)', fontsize=12, fontweight='bold')
-    ax.set_ylabel('Power (GW)', fontsize=12, fontweight='bold')
-    ax.set_title(f'EU {source_name} Energy Production - Intraday Analysis', 
-                fontsize=14, fontweight='bold', pad=20)
+    ax.set_title(f'EU {source_name} Energy Production\n15-minute Resolution',
+                fontsize=18, fontweight='bold')
+    ax.set_ylabel('Power Production (GW)', fontsize=16, fontweight='bold')
+    ax.set_xlabel('Time of Day (Brussels)', fontsize=14)
     
-    # Format x-axis
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M', tz=pytz.timezone('Europe/Brussels')))
-    ax.xaxis.set_major_locator(mdates.HourLocator(interval=2))
-    plt.xticks(rotation=45)
+    ax.grid(True, alpha=0.3)
+    ax.set_xlim(0, len(time_labels))
     
-    # Grid
-    ax.grid(True, alpha=0.3, linestyle='--', linewidth=0.5)
-    ax.set_axisbelow(True)
+    if max_power > 0:
+        ax.set_ylim(0, max_power * 1.05)
+    
+    # X-axis labels (every 2 hours)
+    tick_positions = np.arange(0, len(time_labels), 8)
+    ax.set_xticks(tick_positions)
+    ax.set_xticklabels([time_labels[i] for i in tick_positions], rotation=45)
     
     # Legend
-    ax.legend(loc='upper left', framealpha=0.9, fontsize=10)
+    ax.legend(loc='upper left', fontsize=12, framealpha=0.9)
     
     # Info text
-    info_text = f"Reporting: {len(data['today_countries'])}/{len(EU_COUNTRIES)} countries"
-    if data['missing_countries']:
-        info_text += f"\nMissing: {', '.join(sorted(data['missing_countries']))}"
+    today_countries = all_country_data.get('today')
+    if today_countries is not None and not today_countries.empty:
+        n_reporting = len(today_countries.columns)
+    else:
+        n_reporting = 0
     
-    ax.text(0.02, 0.02, info_text, transform=ax.transAxes,
-           fontsize=8, verticalalignment='bottom',
-           bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
+    info_text = f"Reporting: {n_reporting}/{len(EU_COUNTRIES)} countries"
+    
+    if today_countries is not None and not today_countries.empty:
+        week_ago_countries = all_country_data.get('week_ago')
+        if week_ago_countries is not None and not week_ago_countries.empty:
+            missing = set(week_ago_countries.columns) - set(today_countries.columns)
+            if missing:
+                info_text += f"\nMissing: {', '.join(sorted(missing))}"
+    
+    ax.text(0.02, 0.98, info_text, transform=ax.transAxes,
+           fontsize=10, verticalalignment='top',
+           bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.7))
     
     plt.tight_layout()
     plt.savefig(output_file, dpi=150, bbox_inches='tight')
@@ -365,14 +462,26 @@ def main():
     
     try:
         # Load data
-        data = load_intraday_data(args.source, api_key)
+        all_data, all_country_data = load_intraday_data(args.source, api_key)
+        
+        if not all_data:
+            print("\n✗ No data retrieved. Check:")
+            print("  - API key is valid")
+            print("  - Source keywords are correct")
+            print("  - ENTSO-E API is accessible")
+            sys.exit(1)
         
         # Create plot
         output_file = f'plots/{args.source.replace("-", "_")}_analysis.png'
-        create_intraday_plot(data, args.source, output_file)
+        create_intraday_plot(all_data, all_country_data, args.source, output_file)
+        
+        # Create timestamp file
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')
+        with open(f'plots/{args.source.replace("-", "_")}_last_update.txt', 'w') as f:
+            f.write(timestamp)
         
         print("\n" + "=" * 60)
-        print("ANALYSIS COMPLETE")
+        print("✓ ANALYSIS COMPLETE")
         print("=" * 60)
         
     except Exception as e:
