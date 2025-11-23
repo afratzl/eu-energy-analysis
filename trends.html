@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Historical Analysis - EU Energy Analysis</title>
+    <title>Monthly Trends - EU Energy Analysis</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -13,128 +13,106 @@
             <div class="nav-links">
                 <a href="index.html">Home</a>
                 <a href="live.html">Live</a>
-                <a href="monthly.html">Monthly</a>
-                <a href="trends.html" class="active">Trends</a>
+                <a href="monthly.html" class="active">Monthly</a>
+                <a href="trends.html">Trends</a>
             </div>
         </div>
     </nav>
 
     <div class="container">
         <header class="page-header">
-            <h1>Historical Energy Analysis</h1>
-            <p class="subtitle">Long-term trends and energy transition data (2015-2025)</p>
+            <h1>Monthly Energy Production Trends</h1>
+            <p class="subtitle">10-year monthly comparison (2015-2025)</p>
         </header>
 
         <div class="info-box">
-            <p><strong>Select a chart below</strong> to explore period comparisons and annual evolution of EU energy production</p>
-            <p><strong>Note:</strong> For monthly trends by individual energy source, visit the <a href="monthly.html">Monthly page</a></p>
+            <p><strong>Select an energy source below</strong> to view its 10-year monthly production trends</p>
+            <p><strong>Left Charts:</strong> Absolute production in TWh (Terawatt-hours) | <strong>Right Charts:</strong> Percentage of total EU generation</p>
+            <p><strong>Data Period:</strong> 2015-2025 (current year shows partial data)</p>
         </div>
 
         <!-- DROPDOWN SELECTOR -->
         <div class="chart-selector">
-            <label for="chart-select">Choose Analysis:</label>
-            <select id="chart-select" onchange="showChart(this.value)">
-                <optgroup label="📈 Period Comparisons (5-Year Averages)">
-                    <option value="period-2015-2019">All Sources: 2015-2019</option>
-                    <option value="period-2020-2024">All Sources: 2020-2024</option>
-                    <option value="period-2025-2029">All Sources: 2025-2029</option>
-                    <option value="ren-vs-nonren-2015-2019">Renewable vs Non-Renewable: 2015-2019</option>
-                    <option value="ren-vs-nonren-2020-2024">Renewable vs Non-Renewable: 2020-2024</option>
-                    <option value="ren-vs-nonren-2025-2029">Renewable vs Non-Renewable: 2025-2029</option>
+            <label for="monthly-select">Choose Energy Source:</label>
+            <select id="monthly-select" onchange="showMonthlyChart(this.value)">
+                <optgroup label="🌞 Renewable Sources">
+                    <option value="solar" selected>Solar</option>
+                    <option value="wind">Wind</option>
+                    <option value="hydro">Hydro</option>
+                    <option value="biomass">Biomass</option>
+                    <option value="geothermal">Geothermal</option>
                 </optgroup>
-                
-                <optgroup label="📉 Annual Evolution">
-                    <option value="annual-renewable">Annual Renewable Trends</option>
-                    <option value="annual-nonrenewable">Annual Non-Renewable Trends</option>
-                    <option value="transition" selected>Energy Transition Overview</option>
-                    <option value="yoy">Year-over-Year Change vs 2015</option>
+                <optgroup label="⚡ Non-Renewable Sources">
+                    <option value="gas">Gas</option>
+                    <option value="coal">Coal</option>
+                    <option value="nuclear">Nuclear</option>
+                    <option value="oil">Oil</option>
+                    <option value="waste">Waste</option>
+                </optgroup>
+                <optgroup label="📊 Totals">
+                    <option value="all-renewables">All Renewables</option>
+                    <option value="all-non-renewables">All Non-Renewables</option>
                 </optgroup>
             </select>
         </div>
 
         <!-- DYNAMIC CHART DISPLAY -->
-        <div id="chart-display" class="chart-container">
+        <div id="monthly-chart-display" class="chart-container">
             <!-- Chart will be loaded here by JavaScript -->
         </div>
 
         <!-- INSIGHTS BOX (empty but structure maintained) -->
-        <div id="insights-box" class="insights-box">
+        <div id="monthly-insights-box" class="insights-box">
             <h3>Key Insights</h3>
             <!-- Content removed as requested -->
         </div>
     </div>
 
-    <footer>
-        <p>Built with data from <a href="https://transparency.entsoe.eu/" target="_blank">ENTSO-E</a> | 
-           Source code on <a href="https://github.com/afratzl/eu-energy-analysis" target="_blank">GitHub</a> | 
-           Built by <a href="https://www.linkedin.com/in/alexfratzl/" target="_blank">Alex Fratzl</a> with Claude Sonnet</p>
-    </footer>
-
     <script>
-        // Chart configurations
-        const charts = {
-            'period-2015-2019': {
-                image: 'plots/eu_monthly_energy_sources_mean_2015_2019_combined.png',
-                title: 'All Energy Sources: 2015-2019',
-                description: 'Baseline period showing the starting point of Europe\'s energy transition.'
-            },
-            'period-2020-2024': {
-                image: 'plots/eu_monthly_energy_sources_mean_2020_2024_combined.png',
-                title: 'All Energy Sources: 2020-2024',
-                description: 'Acceleration period with significant renewable growth and fossil fuel reduction.'
-            },
-            'period-2025-2029': {
-                image: 'plots/eu_monthly_energy_sources_mean_2025_2029_combined.png',
-                title: 'All Energy Sources: 2025-2029',
-                description: 'Current period (partial data) showing continued renewable expansion.'
-            },
-            'ren-vs-nonren-2015-2019': {
-                image: 'plots/eu_monthly_renewable_vs_nonrenewable_mean_2015_2019_combined.png',
-                title: 'Renewable vs Non-Renewable: 2015-2019',
-                description: 'Starting period with non-renewables dominating the energy mix.'
-            },
-            'ren-vs-nonren-2020-2024': {
-                image: 'plots/eu_monthly_renewable_vs_nonrenewable_mean_2020_2024_combined.png',
-                title: 'Renewable vs Non-Renewable: 2020-2024',
-                description: 'Crossover period with renewables rapidly catching up to non-renewables.'
-            },
-            'ren-vs-nonren-2025-2029': {
-                image: 'plots/eu_monthly_renewable_vs_nonrenewable_mean_2025_2029_combined.png',
-                title: 'Renewable vs Non-Renewable: 2025-2029',
-                description: 'Current period showing renewables approaching or exceeding 50% in many months.'
-            },
-            'annual-renewable': {
-                image: 'plots/eu_annual_renewable_trends_combined.png',
-                title: 'Annual Renewable Energy Trends',
-                description: 'Solar and wind showing exponential growth, while hydro remains relatively stable.'
-            },
-            'annual-nonrenewable': {
-                image: 'plots/eu_annual_non_renewable_trends_combined.png',
-                title: 'Annual Non-Renewable Energy Trends',
-                description: 'Coal declining sharply, gas fluctuating with market conditions, nuclear relatively stable.'
-            },
-            'transition': {
-                image: 'plots/eu_annual_renewable_vs_non_renewable_combined.png',
-                title: 'The Energy Transition',
-                description: 'The big picture: renewables rising, non-renewables falling - Europe\'s energy transition in action.'
-            },
-            'yoy': {
-                image: 'plots/eu_annual_yoy_change_vs_2015.png',
-                title: 'Year-over-Year Change vs 2015 Baseline',
-                description: 'Percentage change from 2015 baseline showing dramatic renewable growth and fossil fuel decline.'
-            }
+        // Monthly chart configurations
+        const monthlyCharts = {
+            'solar': 'Solar',
+            'wind': 'Wind',
+            'hydro': 'Hydro',
+            'biomass': 'Biomass',
+            'geothermal': 'Geothermal',
+            'gas': 'Gas',
+            'coal': 'Coal',
+            'nuclear': 'Nuclear',
+            'oil': 'Oil',
+            'waste': 'Waste',
+            'all-renewables': 'All Renewables',
+            'all-non-renewables': 'All Non-Renewables'
         };
 
-        // Show chart function
-        function showChart(chartId) {
-            const chart = charts[chartId];
-            const display = document.getElementById('chart-display');
-
-            // Update chart display
+        // Show monthly chart function - now displays both plots vertically
+        function showMonthlyChart(chartId) {
+            const sourceName = monthlyCharts[chartId];
+            const display = document.getElementById('monthly-chart-display');
+            
+            // Clean chart ID for filename
+            const cleanId = chartId.replace(/-/g, '_');
+            
+            // Update chart display with both plots stacked vertically
             display.innerHTML = `
-                <h2>${chart.title}</h2>
-                <img src="${chart.image}" alt="${chart.title}" class="chart-img">
-                <p class="chart-caption">${chart.description}</p>
+                <h2>${sourceName} Energy Production</h2>
+                <p class="chart-subtitle">10-year monthly comparison (2015-2025)</p>
+                
+                <div style="margin-bottom: 40px;">
+                    <h3 style="text-align: center; margin-bottom: 20px;">Percentage of Total EU Generation</h3>
+                    <img src="plots/eu_monthly_${cleanId}_percentage_10years.png" 
+                         alt="${sourceName} Percentage" 
+                         class="chart-img"
+                         onerror="this.src='plots/eu_monthly_${cleanId}_combined_10years.png'; this.onerror=null;">
+                </div>
+                
+                <div style="margin-bottom: 40px;">
+                    <h3 style="text-align: center; margin-bottom: 20px;">Absolute Production (TWh)</h3>
+                    <img src="plots/eu_monthly_${cleanId}_absolute_10years.png" 
+                         alt="${sourceName} Absolute Production" 
+                         class="chart-img"
+                         onerror="this.style.display='none';">
+                </div>
             `;
 
             // Scroll to chart
@@ -143,8 +121,24 @@
 
         // Load default chart on page load
         window.addEventListener('DOMContentLoaded', () => {
-            showChart('transition');
+            showMonthlyChart('solar');
         });
     </script>
+
+    <footer>
+        <p>Built with data from <a href="https://transparency.entsoe.eu/" target="_blank">ENTSO-E</a> | 
+           Source code on <a href="https://github.com/afratzl/eu-energy-analysis" target="_blank">GitHub</a> | 
+           Built by <a href="https://www.linkedin.com/in/alexfratzl/" target="_blank">Alex Fratzl</a> with Claude Sonnet</p>
+    </footer>
+
+    <style>
+        .chart-subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 1.1em;
+            margin-bottom: 30px;
+        }
+    </style>
+
 </body>
 </html>
