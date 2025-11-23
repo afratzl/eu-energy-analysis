@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Timestamp files (regenerated every run)
+plots/*_last_update.txt
+plots/last_update.html
+
+# Stats files (regenerated every run)
+plots/stats/
+plots/yesterday_summary.json
+
+# Credentials (should never be committed)
+credentials.json
+google_credentials.json
+*.pem
+*.key
+
+# Temporary files
+*.tmp
+*.log
