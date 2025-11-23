@@ -37,12 +37,10 @@ def load_data_from_google_sheets():
     Load all energy data from Google Sheets using environment variables
     """
     try:
-        # Get Google credentials from environment variable
         google_creds_json = os.environ.get('GOOGLE_CREDENTIALS_JSON')
         if not google_creds_json:
             raise ValueError("GOOGLE_CREDENTIALS_JSON environment variable not set!")
         
-        # Parse the JSON credentials
         creds_dict = json.loads(google_creds_json)
         
         scope = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
@@ -127,7 +125,7 @@ def create_all_charts(all_data):
     import matplotlib.colors as mcolors
     from matplotlib.colors import LinearSegmentedColormap
 
-    n_years = 20  # Buffer for future years
+    n_years = 20
 
     cmap = LinearSegmentedColormap.from_list('distinct_gradient',
                                              ['#006400', '#228B22', '#00CED1', '#00BFFF',
@@ -239,7 +237,7 @@ def create_all_charts(all_data):
         year_data = all_data[source_name]['year_data']
         total_data = all_data['Total Generation']['year_data']
 
-        # PLOT 1: Percentage
+        # PLOT 1: Percentage (NO TITLE)
         fig1, ax1 = plt.subplots(figsize=(12, 10))
 
         for i, year in enumerate(years_available):
@@ -271,10 +269,9 @@ def create_all_charts(all_data):
 
                 color = year_colors[i % len(year_colors)]
                 ax1.plot(months, percentages, marker='o', color=color, 
-                        linewidth=3.5, markersize=8, label=str(year))
+                        linewidth=4.5, markersize=9, label=str(year))
 
-        ax1.set_title(f'{source_name} % of Total Generation', 
-                     fontsize=26, fontweight='bold', pad=20)
+        # NO TITLE - removed set_title
         ax1.set_xlabel('Month', fontsize=22, fontweight='bold', labelpad=15)
         ax1.set_ylabel('Percentage (%)', fontsize=22, fontweight='bold', labelpad=15)
         
@@ -286,7 +283,6 @@ def create_all_charts(all_data):
         ax1.tick_params(axis='both', labelsize=18)
         ax1.grid(True, alpha=0.3, linewidth=1.5)
 
-        # Legend below - 5 columns, no frame
         ax1.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), 
                   ncol=5, fontsize=18, frameon=False)
 
@@ -297,7 +293,7 @@ def create_all_charts(all_data):
         print(f"  ✓ Saved: {percentage_filename}")
         plt.close()
 
-        # PLOT 2: Absolute
+        # PLOT 2: Absolute (NO TITLE)
         fig2, ax2 = plt.subplots(figsize=(12, 10))
 
         for i, year in enumerate(years_available):
@@ -319,10 +315,9 @@ def create_all_charts(all_data):
 
             color = year_colors[i % len(year_colors)]
             ax2.plot(months, values_twh, marker='o', color=color,
-                    linewidth=3.5, markersize=8, label=str(year))
+                    linewidth=4.5, markersize=9, label=str(year))
 
-        ax2.set_title(f'{source_name} Production (TWh)', 
-                     fontsize=26, fontweight='bold', pad=20)
+        # NO TITLE - removed set_title
         ax2.set_xlabel('Month', fontsize=22, fontweight='bold', labelpad=15)
         ax2.set_ylabel('Energy (TWh)', fontsize=22, fontweight='bold', labelpad=15)
         
@@ -334,7 +329,6 @@ def create_all_charts(all_data):
         ax2.tick_params(axis='both', labelsize=18)
         ax2.grid(True, alpha=0.3, linewidth=1.5)
 
-        # Legend below - 5 columns, no frame
         ax2.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15),
                   ncol=5, fontsize=18, frameon=False)
 
@@ -344,6 +338,631 @@ def create_all_charts(all_data):
         plt.savefig(absolute_filename, dpi=150, bbox_inches='tight')
         print(f"  ✓ Saved: {absolute_filename}")
         plt.close()
+
+    # Monthly Mean Charts by Period
+    print("\n" + "=" * 60)
+    print("CREATING MONTHLY MEAN CHARTS BY PERIOD")
+    print("=" * 60)
+
+    all_energy_sources = ['Solar', 'Wind', 'Hydro', 'Gas', 'Coal', 'Oil', 'Waste', 'Nuclear', 'Geothermal', 'Biomass']
+    available_sources = [source for source in all_energy_sources if source in all_data]
+
+    periods = [
+        {'name': '2015-2019', 'start': 2015, 'end': 2019},
+        {'name': '2020-2024', 'start': 2020, 'end': 2024},
+        {'name': '2025-2029', 'start': 2025, 'end': 2029}
+    ]
+
+    if available_sources and 'Total Generation' in all_data:
+        months = [calendar.month_abbr[i] for i in range(1, 13)]
+
+        # Calculate max values for consistent y-axis
+        max_abs_all_periods = 0
+        max_pct_all_periods = 0
+
+        for period in periods:
+            period_years = [year for year in years_available if period['start'] <= year <= period['end']]
+            if not period_years:
+                continue
+
+            for source_name in available_sources:
+                source_data = all_data[source_name]['year_data']
+                total_data = all_data['Total Generation']['year_data']
+
+                for year in period_years:
+                    if year in source_data and year in total_data:
+                        source_monthly = source_data[year]
+                        total_monthly = total_data[year]
+
+                        for month in range(1, 13):
+                            source_val = source_monthly.get(month, 0)
+                            total_val = total_monthly.get(month, 0)
+
+                            max_abs_all_periods = max(max_abs_all_periods, source_val / 1000)
+
+                            if total_val > 0:
+                                percentage = (source_val / total_val) * 100
+                                max_pct_all_periods = max(max_pct_all_periods, percentage)
+
+        max_abs_all_periods *= 1.1
+        max_pct_all_periods *= 1.1
+
+        for period in periods:
+            print(f"\nCreating Monthly Mean chart for {period['name']}...")
+
+            period_years = [year for year in years_available if period['start'] <= year <= period['end']]
+            if not period_years:
+                continue
+
+            monthly_absolute = {}
+            monthly_percentages = {}
+
+            for source_name in available_sources:
+                monthly_absolute[source_name] = {}
+                monthly_percentages[source_name] = {}
+                source_data = all_data[source_name]['year_data']
+                total_data = all_data['Total Generation']['year_data']
+
+                for month in range(1, 13):
+                    monthly_absolute[source_name][month] = []
+                    monthly_percentages[source_name][month] = []
+
+                for year in period_years:
+                    if year in source_data and year in total_data:
+                        source_monthly = source_data[year]
+                        total_monthly = total_data[year]
+
+                        for month in range(1, 13):
+                            source_val = source_monthly.get(month, 0)
+                            total_val = total_monthly.get(month, 0)
+
+                            monthly_absolute[source_name][month].append(source_val)
+
+                            if total_val > 0:
+                                percentage = (source_val / total_val) * 100
+                                monthly_percentages[source_name][month].append(percentage)
+
+            monthly_means_abs = {}
+            monthly_means_pct = {}
+            for source_name in available_sources:
+                monthly_means_abs[source_name] = []
+                monthly_means_pct[source_name] = []
+                for month in range(1, 13):
+                    absolute_vals = monthly_absolute[source_name][month]
+                    if absolute_vals:
+                        monthly_means_abs[source_name].append(np.mean(absolute_vals))
+                    else:
+                        monthly_means_abs[source_name].append(0)
+
+                    percentages = monthly_percentages[source_name][month]
+                    if percentages:
+                        monthly_means_pct[source_name].append(np.mean(percentages))
+                    else:
+                        monthly_means_pct[source_name].append(0)
+
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
+
+            for source_name in available_sources:
+                color = ENTSOE_COLORS.get(source_name, 'black')
+
+                values_twh = [val / 1000 for val in monthly_means_abs[source_name]]
+                ax1.plot(months, values_twh, marker='o', color=color,
+                         linewidth=4.5, markersize=9, label=source_name)
+                ax2.plot(months, monthly_means_pct[source_name], marker='o', color=color,
+                         linewidth=4.5, markersize=9, label=source_name)
+
+            ax1.set_title('Production (TWh)', fontsize=22, fontweight='bold')
+            ax1.set_xlabel('Month', fontsize=18)
+            ax1.set_ylabel('Energy (TWh)', fontsize=18)
+            ax1.set_ylim(0, max_abs_all_periods)
+            ax1.tick_params(axis='both', labelsize=16)
+            ax1.grid(True, linestyle='--', alpha=0.7)
+
+            ax2.set_title('% of Total Generation', fontsize=22, fontweight='bold')
+            ax2.set_xlabel('Month', fontsize=18)
+            ax2.set_ylabel('Percentage (%)', fontsize=18)
+            ax2.set_ylim(0, max_pct_all_periods)
+            ax2.tick_params(axis='both', labelsize=16)
+            ax2.grid(True, linestyle='--', alpha=0.7)
+
+            handles, labels = ax1.get_legend_handles_labels()
+            fig.legend(handles, labels, loc='lower center', bbox_to_anchor=(0.5, 0.01), ncol=5,
+                       fontsize=14, frameon=False)
+
+            fig.suptitle(f'Monthly Mean Energy Sources: {period["name"]}',
+                         fontsize=24, fontweight='bold', y=0.97)
+
+            plt.tight_layout(rect=[0, 0.06, 1, 0.96])
+
+            period_name_clean = period['name'].replace('-', '_')
+            filename = f'plots/eu_monthly_energy_sources_mean_{period_name_clean}_combined.png'
+            plt.savefig(filename, dpi=150, bbox_inches='tight')
+            print(f"  Chart saved as: {filename}")
+            plt.close()
+
+    # Renewable vs Non-Renewable by Period
+    print("\n" + "=" * 60)
+    print("CREATING RENEWABLE VS NON-RENEWABLE CHARTS")
+    print("=" * 60)
+
+    if 'All Renewables' in all_data and 'All Non-Renewables' in all_data and 'Total Generation' in all_data:
+        month_names_abbr = [calendar.month_abbr[i] for i in range(1, 13)]
+
+        max_abs_renewable_periods = 0
+
+        for period in periods:
+            period_years = [year for year in years_available if period['start'] <= year <= period['end']]
+            if not period_years:
+                continue
+
+            for category_name in ['All Renewables', 'All Non-Renewables']:
+                category_data = all_data[category_name]['year_data']
+
+                for year in period_years:
+                    if year in category_data:
+                        category_monthly = category_data[year]
+
+                        for month in range(1, 13):
+                            category_val = category_monthly.get(month, 0)
+                            max_abs_renewable_periods = max(max_abs_renewable_periods, category_val / 1000)
+
+        max_abs_renewable_periods *= 1.1
+
+        for period in periods:
+            print(f"\nCreating Renewable vs Non-Renewable chart for {period['name']}...")
+
+            period_years = [year for year in years_available if period['start'] <= year <= period['end']]
+            if not period_years:
+                continue
+
+            monthly_absolute = {}
+            monthly_percentages = {}
+
+            for category_name in ['All Renewables', 'All Non-Renewables']:
+                monthly_absolute[category_name] = {}
+                monthly_percentages[category_name] = {}
+                category_data = all_data[category_name]['year_data']
+                total_data = all_data['Total Generation']['year_data']
+
+                for month in range(1, 13):
+                    monthly_absolute[category_name][month] = []
+                    monthly_percentages[category_name][month] = []
+
+                for year in period_years:
+                    if year in category_data and year in total_data:
+                        category_monthly = category_data[year]
+                        total_monthly = total_data[year]
+
+                        for month in range(1, 13):
+                            category_val = category_monthly.get(month, 0)
+                            total_val = total_monthly.get(month, 0)
+
+                            monthly_absolute[category_name][month].append(category_val)
+
+                            if total_val > 0:
+                                percentage = (category_val / total_val) * 100
+                                monthly_percentages[category_name][month].append(percentage)
+
+            monthly_means_abs = {}
+            monthly_means_pct = {}
+            for category_name in ['All Renewables', 'All Non-Renewables']:
+                monthly_means_abs[category_name] = []
+                monthly_means_pct[category_name] = []
+                for month in range(1, 13):
+                    absolute_vals = monthly_absolute[category_name][month]
+                    if absolute_vals:
+                        monthly_means_abs[category_name].append(np.mean(absolute_vals))
+                    else:
+                        monthly_means_abs[category_name].append(0)
+
+                    percentages = monthly_percentages[category_name][month]
+                    if percentages:
+                        monthly_means_pct[category_name].append(np.mean(percentages))
+                    else:
+                        monthly_means_pct[category_name].append(0)
+
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
+
+            for category_name in ['All Renewables', 'All Non-Renewables']:
+                color = ENTSOE_COLORS[category_name]
+
+                values_twh = [val / 1000 for val in monthly_means_abs[category_name]]
+                ax1.plot(month_names_abbr, values_twh, marker='o', color=color,
+                         linewidth=4.5, markersize=9, label=category_name)
+                ax2.plot(month_names_abbr, monthly_means_pct[category_name], marker='o', color=color,
+                         linewidth=4.5, markersize=9, label=category_name)
+
+            ax1.set_title('Production (TWh)', fontsize=22, fontweight='bold')
+            ax1.set_xlabel('Month', fontsize=18)
+            ax1.set_ylabel('Energy (TWh)', fontsize=18)
+            ax1.set_ylim(0, max_abs_renewable_periods)
+            ax1.tick_params(axis='both', labelsize=16)
+            ax1.grid(True, linestyle='--', alpha=0.7)
+
+            ax2.set_title('% of Total Generation', fontsize=22, fontweight='bold')
+            ax2.set_xlabel('Month', fontsize=18)
+            ax2.set_ylabel('Percentage (%)', fontsize=18)
+            ax2.set_ylim(0, 100)
+            ax2.tick_params(axis='both', labelsize=16)
+            ax2.grid(True, linestyle='--', alpha=0.7)
+
+            handles, labels = ax1.get_legend_handles_labels()
+            fig.legend(handles, labels, loc='lower center', bbox_to_anchor=(0.5, 0.01), ncol=2,
+                       fontsize=16, frameon=False)
+
+            fig.suptitle(f'Monthly Mean Renewable vs Non-Renewable: {period["name"]}',
+                         fontsize=24, fontweight='bold', y=0.97)
+
+            plt.tight_layout(rect=[0, 0.05, 1, 0.96])
+
+            period_name_clean = period['name'].replace('-', '_')
+            filename = f'plots/eu_monthly_renewable_vs_nonrenewable_mean_{period_name_clean}_combined.png'
+            plt.savefig(filename, dpi=150, bbox_inches='tight')
+            print(f"  Chart saved as: {filename}")
+            plt.close()
+
+    # Annual Trend Charts
+    print("\n" + "=" * 60)
+    print("CREATING ANNUAL TREND CHARTS")
+    print("=" * 60)
+
+    annual_totals = {}
+
+    renewable_sources = ['Solar', 'Wind', 'Hydro', 'Biomass', 'Geothermal']
+    non_renewable_sources = ['Gas', 'Coal', 'Nuclear', 'Oil', 'Waste']
+    total_sources = ['All Renewables', 'All Non-Renewables']
+
+    available_renewables = [s for s in renewable_sources if s in all_data]
+    available_non_renewables = [s for s in non_renewable_sources if s in all_data]
+    available_totals = [s for s in total_sources if s in all_data]
+
+    all_sources = available_renewables + available_non_renewables + available_totals
+
+    for source_name in all_sources:
+        annual_totals[source_name] = {}
+        year_data = all_data[source_name]['year_data']
+
+        for year in years_available:
+            if year in year_data:
+                annual_total = sum(year_data[year].get(month, 0) for month in range(1, 13))
+                annual_totals[source_name][year] = annual_total
+
+    if 'Total Generation' in all_data:
+        annual_totals['Total Generation'] = {}
+        total_year_data = all_data['Total Generation']['year_data']
+
+        for year in years_available:
+            if year in total_year_data:
+                annual_total = sum(total_year_data[year].get(month, 0) for month in range(1, 13))
+                annual_totals['Total Generation'][year] = annual_total
+
+    # Calculate max values
+    max_annual_twh = 0
+    max_annual_pct = 0
+
+    for source_name in available_renewables + available_non_renewables:
+        if source_name in annual_totals and 'Total Generation' in annual_totals:
+            years_list = sorted(annual_totals[source_name].keys())
+            for year in years_list:
+                val_twh = annual_totals[source_name][year] / 1000
+                max_annual_twh = max(max_annual_twh, val_twh)
+
+                source_value = annual_totals[source_name][year]
+                total_value = annual_totals['Total Generation'][year]
+                if total_value > 0:
+                    percentage = (source_value / total_value) * 100
+                    max_annual_pct = max(max_annual_pct, percentage)
+
+    max_annual_twh *= 1.1
+    max_annual_pct *= 1.1
+
+    # Chart: Renewable Trends
+    if available_renewables and 'Total Generation' in annual_totals:
+        print("\nCreating Annual Renewable Trends...")
+
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
+
+        lines_plotted = 0
+        for source_name in available_renewables:
+            if source_name in annual_totals and len(annual_totals[source_name]) > 0:
+                years_list = sorted(annual_totals[source_name].keys())
+
+                values_twh = [annual_totals[source_name][year] / 1000 for year in years_list]
+                color = ENTSOE_COLORS.get(source_name, 'black')
+                ax1.plot(years_list, values_twh, marker='o', color=color,
+                         linewidth=4.5, markersize=9, label=source_name)
+
+                source_years = set(annual_totals[source_name].keys())
+                total_years = set(annual_totals['Total Generation'].keys())
+                overlapping_years = source_years & total_years & set(years_list)
+
+                if overlapping_years:
+                    pct_years = sorted(overlapping_years)
+                    percentages = []
+                    for year in pct_years:
+                        source_value = annual_totals[source_name][year]
+                        total_value = annual_totals['Total Generation'][year]
+                        if total_value > 0:
+                            percentage = (source_value / total_value) * 100
+                            percentages.append(percentage)
+                        else:
+                            percentages.append(0)
+
+                    ax2.plot(pct_years, percentages, marker='o', color=color,
+                             linewidth=4.5, markersize=9, label=source_name)
+
+                lines_plotted += 1
+
+        if lines_plotted > 0:
+            ax1.set_title('Production (TWh)', fontsize=22, fontweight='bold')
+            ax1.set_xlabel('Year', fontsize=18)
+            ax1.set_ylabel('Energy Production (TWh)', fontsize=18)
+            ax1.set_ylim(0, max_annual_twh)
+            ax1.tick_params(axis='both', labelsize=16)
+            ax1.grid(True, linestyle='--', alpha=0.7)
+
+            ax2.set_title('% of Total Generation', fontsize=22, fontweight='bold')
+            ax2.set_xlabel('Year', fontsize=18)
+            ax2.set_ylabel('Percentage (%)', fontsize=18)
+            ax2.set_ylim(0, max_annual_pct)
+            ax2.tick_params(axis='both', labelsize=16)
+            ax2.grid(True, linestyle='--', alpha=0.7)
+
+            handles, labels = ax1.get_legend_handles_labels()
+            fig.legend(handles, labels, loc='lower center', bbox_to_anchor=(0.5, 0.01), ncol=len(available_renewables),
+                       fontsize=14, frameon=False)
+
+            fig.suptitle('Annual EU Renewable Energy Production Trends',
+                         fontsize=24, fontweight='bold', y=0.97)
+
+            plt.tight_layout(rect=[0, 0.05, 1, 0.96])
+
+            filename = 'plots/eu_annual_renewable_trends_combined.png'
+            plt.savefig(filename, dpi=150, bbox_inches='tight')
+            print(f"  Chart saved as: {filename}")
+            plt.close()
+
+    # Chart: Non-Renewable Trends
+    if available_non_renewables and 'Total Generation' in annual_totals:
+        print("\nCreating Annual Non-Renewable Trends...")
+
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
+
+        lines_plotted = 0
+        for source_name in available_non_renewables:
+            if source_name in annual_totals and len(annual_totals[source_name]) > 0:
+                years_list = sorted(annual_totals[source_name].keys())
+
+                values_twh = [annual_totals[source_name][year] / 1000 for year in years_list]
+                color = ENTSOE_COLORS.get(source_name, 'black')
+                ax1.plot(years_list, values_twh, marker='o', color=color,
+                         linewidth=4.5, markersize=9, label=source_name)
+
+                source_years = set(annual_totals[source_name].keys())
+                total_years = set(annual_totals['Total Generation'].keys())
+                overlapping_years = source_years & total_years & set(years_list)
+
+                if overlapping_years:
+                    pct_years = sorted(overlapping_years)
+                    percentages = []
+                    for year in pct_years:
+                        source_value = annual_totals[source_name][year]
+                        total_value = annual_totals['Total Generation'][year]
+                        if total_value > 0:
+                            percentage = (source_value / total_value) * 100
+                            percentages.append(percentage)
+                        else:
+                            percentages.append(0)
+
+                    ax2.plot(pct_years, percentages, marker='o', color=color,
+                             linewidth=4.5, markersize=9, label=source_name)
+
+                lines_plotted += 1
+
+        if lines_plotted > 0:
+            ax1.set_title('Production (TWh)', fontsize=22, fontweight='bold')
+            ax1.set_xlabel('Year', fontsize=18)
+            ax1.set_ylabel('Energy Production (TWh)', fontsize=18)
+            ax1.set_ylim(0, max_annual_twh)
+            ax1.tick_params(axis='both', labelsize=16)
+            ax1.grid(True, linestyle='--', alpha=0.7)
+
+            ax2.set_title('% of Total Generation', fontsize=22, fontweight='bold')
+            ax2.set_xlabel('Year', fontsize=18)
+            ax2.set_ylabel('Percentage (%)', fontsize=18)
+            ax2.set_ylim(0, max_annual_pct)
+            ax2.tick_params(axis='both', labelsize=16)
+            ax2.grid(True, linestyle='--', alpha=0.7)
+
+            handles, labels = ax1.get_legend_handles_labels()
+            fig.legend(handles, labels, loc='lower center', bbox_to_anchor=(0.5, 0.01),
+                       ncol=len(available_non_renewables), fontsize=14, frameon=False)
+
+            fig.suptitle('Annual EU Non-Renewable Energy Production Trends',
+                         fontsize=24, fontweight='bold', y=0.97)
+
+            plt.tight_layout(rect=[0, 0.05, 1, 0.96])
+
+            filename = 'plots/eu_annual_non_renewable_trends_combined.png'
+            plt.savefig(filename, dpi=150, bbox_inches='tight')
+            print(f"  Chart saved as: {filename}")
+            plt.close()
+
+    # Chart: Renewables vs Non-Renewables Totals
+    if available_totals and 'Total Generation' in annual_totals:
+        print("\nCreating Annual Renewables vs Non-Renewables...")
+
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
+
+        lines_plotted = 0
+        for source_name in available_totals:
+            if source_name in annual_totals and len(annual_totals[source_name]) > 0:
+                years_list = sorted(annual_totals[source_name].keys())
+
+                values_twh = [annual_totals[source_name][year] / 1000 for year in years_list]
+                color = ENTSOE_COLORS[source_name]
+                ax1.plot(years_list, values_twh, marker='o', color=color,
+                         linewidth=4.5, markersize=9, label=source_name)
+
+                source_years = set(annual_totals[source_name].keys())
+                total_years = set(annual_totals['Total Generation'].keys())
+                overlapping_years = source_years & total_years & set(years_list)
+
+                if overlapping_years:
+                    pct_years = sorted(overlapping_years)
+                    percentages = []
+                    for year in pct_years:
+                        source_value = annual_totals[source_name][year]
+                        total_value = annual_totals['Total Generation'][year]
+                        if total_value > 0:
+                            percentage = (source_value / total_value) * 100
+                            percentages.append(percentage)
+                        else:
+                            percentages.append(0)
+
+                    ax2.plot(pct_years, percentages, marker='o', color=color,
+                             linewidth=4.5, markersize=9, label=source_name)
+
+                lines_plotted += 1
+
+        if lines_plotted > 0:
+            ax1.set_title('Production (TWh)', fontsize=22, fontweight='bold')
+            ax1.set_xlabel('Year', fontsize=18)
+            ax1.set_ylabel('Energy Production (TWh)', fontsize=18)
+            ax1.set_ylim(bottom=0)
+            ax1.tick_params(axis='both', labelsize=16)
+            ax1.grid(True, linestyle='--', alpha=0.7)
+
+            ax2.set_title('% of Total Generation', fontsize=22, fontweight='bold')
+            ax2.set_xlabel('Year', fontsize=18)
+            ax2.set_ylabel('Percentage (%)', fontsize=18)
+            ax2.set_ylim(0, 100)
+            ax2.tick_params(axis='both', labelsize=16)
+            ax2.grid(True, linestyle='--', alpha=0.7)
+
+            handles, labels = ax1.get_legend_handles_labels()
+            fig.legend(handles, labels, loc='lower center', bbox_to_anchor=(0.5, 0.01), ncol=2,
+                       fontsize=16, frameon=False)
+
+            fig.suptitle('Annual EU Energy Transition: Renewables vs Non-Renewables',
+                         fontsize=24, fontweight='bold', y=0.97)
+
+            plt.tight_layout(rect=[0, 0.05, 1, 0.96])
+
+            filename = 'plots/eu_annual_renewable_vs_non_renewable_combined.png'
+            plt.savefig(filename, dpi=150, bbox_inches='tight')
+            print(f"  Chart saved as: {filename}")
+            plt.close()
+
+    # Year-over-Year Change vs 2015 Baseline
+    print("\n" + "=" * 60)
+    print("CREATING YOY CHANGE VS 2015 BASELINE")
+    print("=" * 60)
+
+    if annual_totals:
+        print("\nCreating YoY change vs 2015 baseline chart...")
+
+        baseline_year = 2015
+
+        all_sources_for_yoy = available_renewables + available_non_renewables
+        totals_for_yoy = ['All Renewables', 'All Non-Renewables']
+
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
+
+        all_yoy_values = []
+
+        # Left plot: All individual sources
+        lines_plotted = 0
+        for source_name in all_sources_for_yoy:
+            if source_name in annual_totals and baseline_year in annual_totals[source_name]:
+                baseline_value = annual_totals[source_name][baseline_year]
+
+                if baseline_value > 0:
+                    years_list = sorted(annual_totals[source_name].keys())
+
+                    yoy_changes = []
+                    for year in years_list:
+                        if year >= baseline_year:
+                            current_value = annual_totals[source_name][year]
+                            pct_change = ((current_value - baseline_value) / baseline_value) * 100
+                            yoy_changes.append(pct_change)
+                            all_yoy_values.append(pct_change)
+
+                    years_to_plot = [year for year in years_list if year >= baseline_year]
+
+                    if len(years_to_plot) > 0:
+                        color = ENTSOE_COLORS.get(source_name, 'black')
+                        ax1.plot(years_to_plot, yoy_changes, marker='o', color=color,
+                                 linewidth=4.5, markersize=9, label=source_name)
+                        lines_plotted += 1
+
+        # Right plot: Just totals
+        for category_name in totals_for_yoy:
+            if category_name in annual_totals and baseline_year in annual_totals[category_name]:
+                baseline_value = annual_totals[category_name][baseline_year]
+
+                if baseline_value > 0:
+                    years_list = sorted(annual_totals[category_name].keys())
+
+                    yoy_changes = []
+                    for year in years_list:
+                        if year >= baseline_year:
+                            current_value = annual_totals[category_name][year]
+                            pct_change = ((current_value - baseline_value) / baseline_value) * 100
+                            yoy_changes.append(pct_change)
+                            all_yoy_values.append(pct_change)
+
+                    years_to_plot = [year for year in years_list if year >= baseline_year]
+
+                    if len(years_to_plot) > 0:
+                        color = ENTSOE_COLORS[category_name]
+                        ax2.plot(years_to_plot, yoy_changes, marker='o', color=color,
+                                 linewidth=4.5, markersize=9, label=category_name)
+
+        if lines_plotted > 0:
+            if all_yoy_values:
+                y_min = min(all_yoy_values)
+                y_max = max(all_yoy_values)
+                y_margin = (y_max - y_min) * 0.1
+                y_min_limit = y_min - y_margin
+                y_max_limit = y_max + y_margin
+            else:
+                y_min_limit = -50
+                y_max_limit = 100
+
+            ax1.set_title('All Energy Sources', fontsize=22, fontweight='bold')
+            ax1.set_xlabel('Year', fontsize=18)
+            ax1.set_ylabel('% Change from 2015', fontsize=18)
+            ax1.set_ylim(y_min_limit, y_max_limit)
+            ax1.axhline(y=0, color='black', linestyle='--', linewidth=1, alpha=0.5)
+            ax1.tick_params(axis='both', labelsize=16)
+            ax1.grid(True, linestyle='--', alpha=0.7)
+
+            ax2.set_title('Renewables vs Non-Renewables', fontsize=22, fontweight='bold')
+            ax2.set_xlabel('Year', fontsize=18)
+            ax2.set_ylabel('% Change from 2015', fontsize=18)
+            ax2.set_ylim(y_min_limit, y_max_limit)
+            ax2.axhline(y=0, color='black', linestyle='--', linewidth=1, alpha=0.5)
+            ax2.tick_params(axis='both', labelsize=16)
+            ax2.grid(True, linestyle='--', alpha=0.7)
+
+            handles1, labels1 = ax1.get_legend_handles_labels()
+            handles2, labels2 = ax2.get_legend_handles_labels()
+
+            all_handles = handles1 + handles2
+            all_labels = labels1 + labels2
+            fig.legend(all_handles, all_labels, loc='lower center', bbox_to_anchor=(0.5, 0.01),
+                       ncol=6, fontsize=13, frameon=False)
+
+            fig.suptitle('Year-over-Year Change in EU Energy Production vs 2015 Baseline',
+                         fontsize=24, fontweight='bold', y=0.97)
+
+            plt.tight_layout(rect=[0, 0.06, 1, 0.96])
+
+            filename = 'plots/eu_annual_yoy_change_vs_2015.png'
+            plt.savefig(filename, dpi=150, bbox_inches='tight')
+            print(f"  Chart saved as: {filename}")
+            plt.close()
 
     print("\n" + "=" * 60)
     print("ALL MOBILE-OPTIMIZED PLOTS GENERATED")
@@ -355,17 +974,18 @@ def main():
     Main function
     """
     print("=" * 60)
-    print("EU ENERGY PLOTTER - MOBILE OPTIMIZED")
+    print("EU ENERGY PLOTTER - MOBILE OPTIMIZED + ALL CHARTS")
     print("=" * 60)
     print("\nFEATURES:")
-    print("  ✓ TWO separate plots per source (percentage + absolute)")
-    print("  ✓ Optimized fonts (26px titles, 22px labels, 18px ticks/legend)")
-    print("  ✓ Tall plots (12x10) for better mobile viewing")
-    print("  ✓ Legends below plots in 5 columns (no frame)")
-    print("  ✓ Normalized y-axes for individual vs totals")
+    print("  ✓ Individual source plots (NO titles in images)")
+    print("  ✓ Monthly mean by period charts")
+    print("  ✓ Renewable vs non-renewable by period")
+    print("  ✓ Annual trend charts")
+    print("  ✓ YoY change vs 2015 baseline")
+    print("  ✓ Consistent styling: 4.5px lines, no frame legends")
+    print("  ✓ Optimized fonts (26/22/18 for individual, 22/18/16 for combined)")
     print("=" * 60)
 
-    # Verify environment variable
     if not os.environ.get('GOOGLE_CREDENTIALS_JSON'):
         print("\n⚠️  WARNING: GOOGLE_CREDENTIALS_JSON not set!")
         return
