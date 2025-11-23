@@ -26,9 +26,7 @@
         </header>
 
         <div class="info-box">
-            <p><strong>Updates:</strong> Every hour on GitHub Actions</p>
-            <p><strong>Resolution:</strong> 15-minute intervals with 2-hour data quality cutoff</p>
-            <p><strong>Note:</strong> Dashed lines show projected production including unreported countries</p>
+            <p><strong>Select an energy source below</strong> to view its live intraday production</p>
         </div>
 
         <!-- DROPDOWN SELECTOR -->
@@ -64,14 +62,22 @@
         <div class="technical-note">
             <h3>Technical Notes</h3>
             <ul>
+                <li><strong>Updates:</strong> Every hour on GitHub Actions</li>
+                <li><strong>Resolution:</strong> 15-minute intervals with 2-hour data quality cutoff</li>
+                <li><strong>Projection System:</strong> Dashed lines show projected production including unreported countries</li>
                 <li><strong>Data Source:</strong> ENTSO-E Transparency Platform API</li>
                 <li><strong>Coverage:</strong> All EU member states (projection system handles unreported countries)</li>
                 <li><strong>Time Zone:</strong> All data displayed in Europe/Brussels (CET/CEST)</li>
                 <li><strong>Units:</strong> Gigawatts (GW) for improved readability</li>
-                <li><strong>Projection System:</strong> Dashed lines estimate total production including countries with missing data</li>
             </ul>
         </div>
     </div>
+
+    <footer>
+        <p>Built with data from <a href="https://transparency.entsoe.eu/" target="_blank">ENTSO-E</a> | 
+           Source code on <a href="https://github.com/afratzl/eu-energy-analysis" target="_blank">GitHub</a> | 
+           Built by <a href="https://www.linkedin.com/in/alexfratzl/" target="_blank">Alex Fratzl</a> with Claude Sonnet</p>
+    </footer>
 
     <script>
         // Live chart configurations
@@ -166,11 +172,5 @@
             showLiveChart(currentSelect);
         }, 5 * 60 * 1000);
     </script>
-
-    <footer>
-        <p>Built with data from <a href="https://transparency.entsoe.eu/" target="_blank">ENTSO-E</a> | 
-           Source code on <a href="https://github.com/afratzl/eu-energy-analysis" target="_blank">GitHub</a> | 
-           Built by <a href="https://www.linkedin.com/in/alexfratzl/" target="_blank">Alex Fratzl</a> with Claude Sonnet</p>
-    </footer>
 </body>
 </html>
