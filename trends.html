@@ -26,21 +26,15 @@
         </header>
 
         <div class="info-box">
-            <p><strong>Select a chart below</strong> to explore different aspects of EU energy production</p>
+            <p><strong>Select a chart below</strong> to explore period comparisons and annual evolution of EU energy production</p>
+            <p><strong>Note:</strong> For monthly trends by individual energy source, visit the <a href="monthly.html">Monthly page</a></p>
         </div>
 
         <!-- DROPDOWN SELECTOR -->
         <div class="chart-selector">
             <label for="chart-select">Choose Analysis:</label>
             <select id="chart-select" onchange="showChart(this.value)">
-                <optgroup label="📊 Monthly Trends (10-Year Comparison)">
-                    <option value="solar">Solar Production</option>
-                    <option value="wind">Wind Production</option>
-                    <option value="hydro">Hydro Production</option>
-                    <option value="renewable">Total Renewable Production</option>
-                </optgroup>
-                
-                <optgroup label="📈 Period Comparisons">
+                <optgroup label="📈 Period Comparisons (5-Year Averages)">
                     <option value="period-2015-2019">All Sources: 2015-2019</option>
                     <option value="period-2020-2024">All Sources: 2020-2024</option>
                     <option value="period-2025-2029">All Sources: 2025-2029</option>
@@ -69,49 +63,15 @@
         </div>
     </div>
 
+    <footer>
+        <p>Built with data from <a href="https://transparency.entsoe.eu/" target="_blank">ENTSO-E</a> | 
+           Source code on <a href="https://github.com/afratzl/eu-energy-analysis" target="_blank">GitHub</a> | 
+           Built by <a href="https://www.linkedin.com/in/alexfratzl/" target="_blank">Alex Fratzl</a> with Claude Sonnet</p>
+    </footer>
+
     <script>
-        // Chart configurations
+        // Chart configurations (NO MONTHLY CHARTS - those are on monthly.html)
         const charts = {
-            'solar': {
-                image: 'plots/eu_monthly_solar_combined_10years.png',
-                title: 'Solar Energy Production',
-                description: 'Monthly solar production showing strong seasonal variation with peak production in summer months and steady year-over-year growth.',
-                insights: [
-                    'Solar production shows 3-4x variation between summer and winter',
-                    'Consistent year-over-year growth in both absolute production and percentage of total',
-                    'Peak months (May-August) show dramatic increases over the decade'
-                ]
-            },
-            'wind': {
-                image: 'plots/eu_monthly_wind_total_combined_10years.png',
-                title: 'Wind Energy Production',
-                description: 'Monthly wind production with peak output typically in winter months and significant year-to-year growth.',
-                insights: [
-                    'Counter-seasonal to solar - higher output in winter months',
-                    'More variable than solar due to weather patterns',
-                    'Offshore wind expansion driving recent growth'
-                ]
-            },
-            'hydro': {
-                image: 'plots/eu_monthly_hydro_combined_10years.png',
-                title: 'Hydro Energy Production',
-                description: 'Seasonal patterns influenced by precipitation and snowmelt, with variations across years.',
-                insights: [
-                    'Most stable renewable source',
-                    'Spring peaks due to snowmelt',
-                    'Susceptible to drought conditions in recent years'
-                ]
-            },
-            'renewable': {
-                image: 'plots/eu_monthly_total_renewable_combined_10years.png',
-                title: 'Total Renewable Energy Production',
-                description: 'Combined renewable energy showing steady increase in both absolute production and percentage of total generation.',
-                insights: [
-                    'Renewables complement each other seasonally',
-                    'Consistent upward trend across all months',
-                    'Now approaching or exceeding 50% in many months'
-                ]
-            },
             'period-2015-2019': {
                 image: 'plots/eu_monthly_energy_sources_mean_2015_2019_combined.png',
                 title: 'All Energy Sources: 2015-2019',
@@ -245,11 +205,5 @@
             showChart('transition');
         });
     </script>
-
-    <footer>
-        <p>Built with data from <a href="https://transparency.entsoe.eu/" target="_blank">ENTSO-E</a> | 
-           Source code on <a href="https://github.com/afratzl/eu-energy-analysis" target="_blank">GitHub</a> | 
-           Built by <a href="https://www.linkedin.com/in/alexfratzl/" target="_blank">Alex Fratzl</a> with Claude Sonnet</p>
-    </footer>
 </body>
 </html>
