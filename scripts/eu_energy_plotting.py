@@ -12,7 +12,7 @@ import json
 ENTSOE_COLORS = {
     # Renewables
     'Solar': '#FFD700',  # Gold
-    'Wind Total': '#228B22',  # Forest Green
+    'Wind': '#228B22',  # Forest Green
     'Wind Onshore': '#2E8B57',  # Sea Green
     'Wind Offshore': '#008B8B',  # Dark Cyan
     'Hydro': '#1E90FF',  # Dodger Blue
@@ -220,7 +220,7 @@ def create_all_charts(all_data):
     # COMBINED CHARTS: All major energy sources (Absolute + Percentage side-by-side)
     sources_to_plot = [
         'Solar', 
-        'Wind Total', 
+        'Wind', 
         'Hydro',
         'Biomass',
         'Geothermal',
@@ -340,7 +340,7 @@ def create_all_charts(all_data):
     print("CREATING MONTHLY MEAN CHARTS BY PERIOD")
     print("=" * 60)
 
-    all_energy_sources = ['Solar', 'Wind Total', 'Hydro', 'Gas', 'Coal', 'Oil', 'Waste', 'Nuclear', 'Geothermal',
+    all_energy_sources = ['Solar', 'Wind', 'Hydro', 'Gas', 'Coal', 'Oil', 'Waste', 'Nuclear', 'Geothermal',
                           'Biomass']
     available_sources = [source for source in all_energy_sources if source in all_data]
 
@@ -643,7 +643,7 @@ def create_all_charts(all_data):
 
     annual_totals = {}
 
-    renewable_sources = ['Solar', 'Wind Total', 'Hydro', 'Biomass', 'Geothermal']
+    renewable_sources = ['Solar', 'Wind', 'Hydro', 'Biomass', 'Geothermal']
     non_renewable_sources = ['Gas', 'Coal', 'Nuclear', 'Oil', 'Waste']
     total_sources = ['All Renewables', 'All Non-Renewables']
 
@@ -1032,6 +1032,7 @@ def main():
     print("  ✓ YoY change vs 2015 baseline")
     print("  ✓ Full-screen display")
     print("  ✓ ENTSO-E colors")
+    print("  ✓ Wind renamed from 'Wind Total' to 'Wind'")
     print("=" * 60)
 
     # Verify environment variables are set
