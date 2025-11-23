@@ -61,9 +61,10 @@
             <!-- Chart will be loaded here by JavaScript -->
         </div>
 
-        <!-- INSIGHTS BOX (updates based on selected chart) -->
+        <!-- INSIGHTS BOX (empty but structure maintained) -->
         <div id="monthly-insights-box" class="insights-box">
-            <!-- Insights will be loaded here by JavaScript -->
+            <h3>Key Insights</h3>
+            <!-- Content removed as requested -->
         </div>
     </div>
 
@@ -72,123 +73,51 @@
         const monthlyCharts = {
             'solar': {
                 image: 'plots/eu_monthly_solar_combined_10years.png',
-                title: 'Solar Energy Production',
-                insights: [
-                    'Solar production shows strong seasonality with 3-4x variation between summer and winter',
-                    'Steady year-over-year growth in both absolute production and percentage of total generation',
-                    'Peak production occurs in May-August across all years',
-                    'Recent years show dramatic increases in both capacity and output'
-                ]
+                title: 'Solar Energy Production'
             },
             'wind': {
                 image: 'plots/eu_monthly_wind_combined_10years.png',
-                title: 'Wind Energy Production',
-                insights: [
-                    'Peak production typically in winter months (November-February)',
-                    'Counter-seasonal to solar, providing complementary renewable generation',
-                    'Significant year-to-year growth driven by offshore wind expansion',
-                    'More variable than solar due to weather patterns'
-                ]
+                title: 'Wind Energy Production'
             },
             'hydro': {
                 image: 'plots/eu_monthly_hydro_combined_10years.png',
-                title: 'Hydro Energy Production',
-                insights: [
-                    'Seasonal patterns influenced by precipitation and snowmelt',
-                    'Spring peaks (April-June) due to snowmelt in Alpine regions',
-                    'Relatively stable compared to wind and solar',
-                    'Variations across years reflect drought conditions and water availability'
-                ]
+                title: 'Hydro Energy Production'
             },
             'biomass': {
                 image: 'plots/eu_monthly_biomass_combined_10years.png',
-                title: 'Biomass Energy Production',
-                insights: [
-                    'Relatively stable throughout the year',
-                    'Provides dispatchable renewable energy',
-                    'Slight seasonal variation with higher use in winter',
-                    'Important for balancing variable renewables'
-                ]
+                title: 'Biomass Energy Production'
             },
             'geothermal': {
                 image: 'plots/eu_monthly_geothermal_combined_10years.png',
-                title: 'Geothermal Energy Production',
-                insights: [
-                    'Very stable baseload renewable energy',
-                    'Limited geographical availability',
-                    'Concentrated in Iceland, Italy, and Turkey',
-                    'Minimal seasonal variation'
-                ]
+                title: 'Geothermal Energy Production'
             },
             'gas': {
                 image: 'plots/eu_monthly_gas_combined_10years.png',
-                title: 'Gas Energy Production',
-                insights: [
-                    'Acts as flexible backup during energy transition',
-                    'Seasonal peaks in winter for heating demand',
-                    'Fluctuations reflect energy crisis and gas price volatility',
-                    'Gradually declining as renewables expand'
-                ]
+                title: 'Gas Energy Production'
             },
             'coal': {
                 image: 'plots/eu_monthly_coal_combined_10years.png',
-                title: 'Coal Energy Production',
-                insights: [
-                    'Sharp decline over the decade (>50% reduction)',
-                    'Phase-out accelerating across EU countries',
-                    'Still used for winter peak demand in some regions',
-                    'Being replaced primarily by renewables and gas'
-                ]
+                title: 'Coal Energy Production'
             },
             'nuclear': {
                 image: 'plots/eu_monthly_nuclear_combined_10years.png',
-                title: 'Nuclear Energy Production',
-                insights: [
-                    'Provides stable baseload power',
-                    'Relatively constant throughout the year',
-                    'Ongoing debate about role in energy transition',
-                    'Some countries expanding, others phasing out'
-                ]
+                title: 'Nuclear Energy Production'
             },
             'oil': {
                 image: 'plots/eu_monthly_oil_combined_10years.png',
-                title: 'Oil Energy Production',
-                insights: [
-                    'Very small share of electricity generation',
-                    'Mainly used for backup and peak demand',
-                    'Declining use in power sector',
-                    'More relevant for transport and heating sectors'
-                ]
+                title: 'Oil Energy Production'
             },
             'waste': {
                 image: 'plots/eu_monthly_waste_combined_10years.png',
-                title: 'Waste Energy Production',
-                insights: [
-                    'Waste-to-energy provides stable generation',
-                    'Part of circular economy initiatives',
-                    'Slight seasonal variation',
-                    'Growing as waste management infrastructure expands'
-                ]
+                title: 'Waste Energy Production'
             },
             'all-renewables': {
                 image: 'plots/eu_monthly_all_renewables_combined_10years.png',
-                title: 'Total Renewable Energy Production',
-                insights: [
-                    'Combined renewables benefit from complementary seasonal patterns',
-                    'Steady increase in both absolute production and percentage of total generation',
-                    'Renewable percentage has grown significantly across all months',
-                    'Many months now approaching or exceeding 50% renewable generation'
-                ]
+                title: 'Total Renewable Energy Production'
             },
             'all-non-renewables': {
                 image: 'plots/eu_monthly_all_non-renewables_combined_10years.png',
-                title: 'Total Non-Renewable Energy Production',
-                insights: [
-                    'Declining trend as renewables expand',
-                    'Still provides majority of generation but share decreasing',
-                    'Seasonal peaks reflect heating demand',
-                    'Transition away accelerating'
-                ]
+                title: 'Total Non-Renewable Energy Production'
             }
         };
 
@@ -196,21 +125,12 @@
         function showMonthlyChart(chartId) {
             const chart = monthlyCharts[chartId];
             const display = document.getElementById('monthly-chart-display');
-            const insights = document.getElementById('monthly-insights-box');
 
             // Update chart display
             display.innerHTML = `
                 <h2>${chart.title}</h2>
                 <img src="${chart.image}" alt="${chart.title}" class="chart-img">
                 <p class="chart-caption">10-year monthly comparison showing seasonal patterns and long-term trends</p>
-            `;
-
-            // Update insights
-            insights.innerHTML = `
-                <h3>Key Insights</h3>
-                <ul>
-                    ${chart.insights.map(insight => `<li>${insight}</li>`).join('')}
-                </ul>
             `;
 
             // Scroll to chart
