@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="refresh" content="3600"> <!-- Auto-refresh every hour -->
+    <meta http-equiv="refresh" content="3600">
     <title>EU Wind Energy Analysis</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            max-width: 1400px;
+            max-width: 95%;
             margin: 0 auto;
             padding: 20px;
             background-color: #f5f5f5;
@@ -58,14 +58,13 @@
     <div class="footer">
         <p>Data from ENTSO-E Transparency Platform</p>
         <p>Updated automatically every hour</p>
-        <p><a href="https://github.com/YOUR-USERNAME/eu-wind-analysis">View on GitHub</a></p>
+        <p><a href="https://github.com/afratzl/eu-wind-analysis">View on GitHub</a></p>
         <p style="margin-top: 20px; font-size: 14px; color: #b0b0b0;">
             Created by Alex Fratzl with the help of Claude Sonnet 4.5
         </p>
     </div>
 
     <script>
-        // Load timestamp
         fetch('plots/last_update.html')
             .then(response => response.text())
             .then(html => {
@@ -75,7 +74,6 @@
                 document.getElementById('update-time').innerHTML = '<p>Timestamp unavailable</p>';
             });
         
-        // Force image refresh to bypass cache
         document.getElementById('plot-img').src = 'plots/wind_analysis.png?' + new Date().getTime();
     </script>
 </body>
