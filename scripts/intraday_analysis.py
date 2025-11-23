@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Unified Intraday Energy Analysis Script - FIXED VERSION
-Analyzes any energy source for EU countries with 15-minute resolution
+Unified Intraday Energy Analysis Script
+Based on the working wind_analysis.py structure
 """
 
 from entsoe import EntsoePandasClient
 import pandas as pd
 import matplotlib
-matplotlib.use('Agg')  # Non-interactive backend
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime, timedelta
@@ -29,8 +29,8 @@ EU_COUNTRIES = [
     'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE'
 ]
 
-# Energy source mapping (matching data collection script)
-ENERGY_SOURCE_MAPPING = {
+# Energy source keyword mapping (EXACT from data collection script)
+SOURCE_KEYWORDS = {
     'solar': ['Solar'],
     'wind': ['Wind Onshore', 'Wind Offshore'],
     'hydro': ['Hydro', 'Hydro Water Reservoir', 'Hydro Run-of-river', 'Hydro Pumped Storage',
@@ -54,7 +54,7 @@ ENERGY_SOURCE_MAPPING = {
                            'Waste', 'Other non-renewable', 'Other']
 }
 
-# Display names for sources
+# Display names
 DISPLAY_NAMES = {
     'solar': 'Solar',
     'wind': 'Wind',
@@ -71,16 +71,21 @@ DISPLAY_NAMES = {
 }
 
 
-def get_intraday_data_for_country(client, country, start_date, end_date, max_retries=3):
+def get_intraday_data_for_country(country, start_date, end_date, client, data_type='generation', max_retries=3):
     """
-    Get intraday generation data for a specific country with retry logic
+    Get intraday data for a specific country and date range with retry logic
     """
     start = pd.Timestamp(start_date, tz='Europe/Brussels')
     end = pd.Timestamp(end_date, tz='Europe/Brussels') + timedelta(hours=1)
 
     for attempt in range(max_retries):
         try:
-            data = client.query_generation(country, start=start, end=end)
+            if data_type == 'generation':
+                data = client.query_generation(country, start=start, end=end)
+            elif data_type == 'load':
+                data = client.query_load(country, start=start, end=end)
+            else:
+                return pd.DataFrame()
 
             if data.empty:
                 return pd.DataFrame()
@@ -91,13 +96,12 @@ def get_intraday_data_for_country(client, country, start_date, end_date, max_ret
             elif str(data.index.tz) != 'Europe/Brussels':
                 data.index = data.index.tz_convert('Europe/Brussels')
 
-            time.sleep(0.2)  # Rate limiting protection
+            time.sleep(0.2)  # Rate limiting
             return data
 
         except Exception as e:
             if attempt < max_retries - 1:
                 wait_time = 0.5 * (2 ** attempt)
-                print(f"  Retry {country} (attempt {attempt + 1}/{max_retries})...")
                 time.sleep(wait_time)
             else:
                 time.sleep(0.5)
@@ -108,8 +112,7 @@ def get_intraday_data_for_country(client, country, start_date, end_date, max_ret
 
 def extract_source_from_generation_data(generation_data, source_keywords):
     """
-    Extract specific energy source data using keyword matching
-    Copied from working wind_analysis.py logic
+    Extract energy source data using EXACT logic from working script
     """
     relevant_columns = []
     for keyword in source_keywords:
@@ -129,8 +132,7 @@ def extract_source_from_generation_data(generation_data, source_keywords):
 
 def interpolate_country_data(country_series, country_name, mark_extrapolated=False):
     """
-    Interpolate to 15-minute resolution
-    Copied from working wind_analysis.py
+    Interpolate to 15-minute resolution (EXACT from working script)
     """
     if len(country_series) == 0:
         return None
@@ -144,7 +146,7 @@ def interpolate_country_data(country_series, country_name, mark_extrapolated=Fal
 
     last_actual_time = country_series.index.max() if mark_extrapolated else None
 
-    if most_common_interval >= 45:  # Hourly data
+    if most_common_interval >= 45:  # Hourly
         interpolated = country_series.reindex(complete_index)
         interpolated = interpolated.interpolate(method='cubic', limit_area='inside')
         interpolated = interpolated.fillna(method='ffill').fillna(method='bfill')
@@ -163,30 +165,45 @@ def interpolate_country_data(country_series, country_name, mark_extrapolated=Fal
     return interpolated
 
 
-def aggregate_eu_data(client, countries, start_date, end_date, source_keywords, mark_extrapolated=False):
+def aggregate_eu_data(countries, start_date, end_date, client, source_keywords, data_type='generation', mark_extrapolated=False):
     """
     Aggregate energy data across EU countries
-    Adapted from working wind_analysis.py
     """
     all_interpolated_data = []
     successful_countries = []
 
     for country in countries:
-        country_data = get_intraday_data_for_country(client, country, start_date, end_date)
+        country_data = get_intraday_data_for_country(country, start_date, end_date, client, data_type)
 
         if not country_data.empty:
-            country_energy, energy_columns = extract_source_from_generation_data(country_data, source_keywords)
+            if data_type == 'generation':
+                country_energy, energy_columns = extract_source_from_generation_data(country_data, source_keywords)
 
-            if energy_columns:  # Only process if columns found
-                country_energy.name = country
-                interpolated = interpolate_country_data(country_energy, country, mark_extrapolated=mark_extrapolated)
+                if energy_columns:
+                    country_energy.name = country
+                    interpolated = interpolate_country_data(country_energy, country, mark_extrapolated=mark_extrapolated)
+
+                    if interpolated is not None:
+                        all_interpolated_data.append(interpolated)
+                        successful_countries.append(country)
+
+            elif data_type == 'load':
+                if isinstance(country_data, pd.Series):
+                    country_series = country_data
+                elif isinstance(country_data, pd.DataFrame) and len(country_data.columns) == 1:
+                    country_series = country_data.iloc[:, 0]
+                else:
+                    country_series = country_data.sum(axis=1)
+
+                country_series.name = country
+                interpolated = interpolate_country_data(country_series, country, mark_extrapolated=mark_extrapolated)
 
                 if interpolated is not None:
                     all_interpolated_data.append(interpolated)
                     successful_countries.append(country)
 
     if not all_interpolated_data:
-        return pd.Series(dtype=float), pd.DataFrame(), []
+        return pd.DataFrame(), pd.DataFrame(), []
 
     combined_df = pd.concat(all_interpolated_data, axis=1)
     eu_total = combined_df.sum(axis=1, skipna=True)
@@ -196,247 +213,485 @@ def aggregate_eu_data(client, countries, start_date, end_date, source_keywords, 
 
 def load_intraday_data(source_type, api_key):
     """
-    Load intraday data for specified energy source
+    Load 15-minute data from ENTSO-E (EXACT structure from working script)
     """
     client = EntsoePandasClient(api_key=api_key)
+    source_keywords = SOURCE_KEYWORDS[source_type]
     
-    # Get source keywords
-    source_keywords = ENERGY_SOURCE_MAPPING.get(source_type)
-    if not source_keywords:
-        raise ValueError(f"Unknown source type: {source_type}")
-    
-    print(f"\nSource keywords: {source_keywords}")
-    
-    # Define time ranges
+    print("=" * 60)
+    print(f"LOADING {DISPLAY_NAMES[source_type].upper()} DATA")
+    print("=" * 60)
+
     today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     yesterday = today - timedelta(days=1)
-    
+
     week_ago_end = yesterday
     week_ago_start = week_ago_end - timedelta(days=7)
-    
+
+    year_ago_end = datetime(today.year - 1, yesterday.month, yesterday.day)
+    year_ago_start = year_ago_end - timedelta(days=7)
+
+    two_years_ago_end = datetime(today.year - 2, yesterday.month, yesterday.day)
+    two_years_ago_start = two_years_ago_end - timedelta(days=7)
+
     periods = {
         'today': (today, today + timedelta(days=1)),
         'yesterday': (yesterday, yesterday + timedelta(days=1)),
-        'week_ago': (week_ago_start, week_ago_end)
+        'week_ago': (week_ago_start, week_ago_end),
+        'year_ago': (year_ago_start, year_ago_end),
+        'two_years_ago': (two_years_ago_start, two_years_ago_end)
     }
-    
+
     all_data = {}
     all_country_data = {}
-    
+
     for period_name, (start_date, end_date) in periods.items():
         print(f"\n{period_name.upper()}: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
-        
+
         mark_extrap = (period_name in ['today', 'yesterday'])
-        
+
         energy_data, energy_by_country, energy_countries = aggregate_eu_data(
-            client, EU_COUNTRIES, start_date, end_date, source_keywords, mark_extrapolated=mark_extrap
+            EU_COUNTRIES, start_date, end_date, client, source_keywords, 'generation', mark_extrapolated=mark_extrap
         )
-        
-        if not energy_data.empty:
-            all_data[period_name] = energy_data
-            all_country_data[period_name] = energy_by_country
-            
-            avg_value = energy_data.mean() / 1000  # Convert to GW
-            print(f"  ✓ {len(energy_data)} points, avg: {avg_value:.1f} GW")
-            print(f"  ✓ {len(energy_countries)}/{len(EU_COUNTRIES)} countries reporting")
-        else:
-            print(f"  ✗ No data")
-    
-    # Calculate projected values for missing countries
-    if 'today' in all_data and 'week_ago' in all_country_data:
-        print("\nCreating projected values for TODAY...")
-        all_data['today_projected'] = create_projected_data(
-            all_data['today'],
-            all_country_data.get('today', pd.DataFrame()),
-            all_country_data.get('week_ago', pd.DataFrame()),
-            'today'
+        load_data, load_by_country, load_countries = aggregate_eu_data(
+            EU_COUNTRIES, start_date, end_date, client, source_keywords, 'load', mark_extrapolated=mark_extrap
         )
-    
-    if 'yesterday' in all_data and 'week_ago' in all_country_data:
-        print("Creating projected values for YESTERDAY...")
-        all_data['yesterday_projected'] = create_projected_data(
-            all_data['yesterday'],
-            all_country_data.get('yesterday', pd.DataFrame()),
-            all_country_data.get('week_ago', pd.DataFrame()),
-            'yesterday'
-        )
-    
-    return all_data, all_country_data
+
+        if not energy_data.empty and not load_data.empty:
+            common_times = energy_data.index.intersection(load_data.index)
+
+            if len(common_times) > 0:
+                period_df = pd.DataFrame({
+                    'timestamp': common_times,
+                    'energy_production': energy_data.loc[common_times].values,
+                    'total_load': load_data.loc[common_times].values
+                })
+
+                period_df = period_df[
+                    (period_df['timestamp'] >= pd.Timestamp(start_date, tz='Europe/Brussels')) &
+                    (period_df['timestamp'] < pd.Timestamp(end_date, tz='Europe/Brussels'))
+                ]
+
+                period_df['energy_percentage'] = np.clip(
+                    (period_df['energy_production'] / period_df['total_load']) * 100, 0, 100
+                )
+
+                period_df['date'] = period_df['timestamp'].dt.strftime('%Y-%m-%d')
+                period_df['time'] = period_df['timestamp'].dt.strftime('%H:%M')
+
+                all_data[period_name] = period_df
+
+                if not energy_by_country.empty:
+                    all_country_data[period_name] = energy_by_country.loc[period_df['timestamp']]
+                if not load_by_country.empty:
+                    all_country_data[f'{period_name}_load'] = load_by_country.loc[period_df['timestamp']]
+
+                avg_pct = period_df['energy_percentage'].mean()
+                print(f"  ✓ {len(period_df)} points, avg {DISPLAY_NAMES[source_type]}: {avg_pct:.1f}%")
+
+    # Create projected values
+    if 'week_ago' in all_country_data and 'today' in all_country_data and 'today' in all_data:
+        if 'today_load' in all_country_data and 'week_ago_load' in all_country_data:
+            print("\nCreating projected values for TODAY...")
+            all_data['today_projected'] = create_projected_data(
+                all_data['today'],
+                all_country_data['today'], all_country_data['week_ago'],
+                all_country_data['today_load'], all_country_data['week_ago_load'],
+                'today'
+            )
+
+    if 'week_ago' in all_country_data and 'yesterday' in all_country_data and 'yesterday' in all_data:
+        if 'yesterday_load' in all_country_data and 'week_ago_load' in all_country_data:
+            print("Creating projected values for YESTERDAY...")
+            all_data['yesterday_projected'] = create_projected_data(
+                all_data['yesterday'],
+                all_country_data['yesterday'], all_country_data['week_ago'],
+                all_country_data['yesterday_load'], all_country_data['week_ago_load'],
+                'yesterday'
+            )
+
+    return all_data
 
 
-def create_projected_data(actual_series, actual_countries, week_ago_countries, period_name='today'):
+def create_projected_data(actual_df, actual_energy_countries, week_ago_energy_countries,
+                          actual_load_countries, week_ago_load_countries, period_name='today'):
     """
-    Create projected values by filling missing country data with week_ago averages
+    Create projected values (EXACT from working script)
     """
-    if actual_countries.empty or week_ago_countries.empty:
-        return actual_series
-    
     print(f"  Creating projected data for {period_name}...")
-    
-    week_ago_countries_with_time = week_ago_countries.copy()
-    week_ago_countries_with_time['time'] = week_ago_countries_with_time.index.strftime('%H:%M')
-    week_ago_avg = week_ago_countries_with_time.groupby('time').mean(numeric_only=True)
-    
-    # Find missing countries
-    week_ago_list = set(week_ago_countries.columns)
-    today_list = set(actual_countries.columns)
-    completely_missing = week_ago_list - today_list
-    
-    if completely_missing:
-        print(f"  Missing countries: {', '.join(sorted(completely_missing))}")
-    
-    # Create projected series by adding weekly averages for missing countries
-    projected_series = actual_series.copy()
-    
-    for timestamp in projected_series.index:
-        time_str = timestamp.strftime('%H:%M')
-        
-        if time_str in week_ago_avg.index:
-            additional_power = 0
-            for country in completely_missing:
-                if country in week_ago_avg.columns:
-                    val = week_ago_avg.loc[time_str, country]
-                    if not pd.isna(val):
-                        additional_power += val
-            
-            projected_series.loc[timestamp] += additional_power
-    
-    return projected_series
+
+    week_ago_energy_list = set(week_ago_energy_countries.columns)
+    today_energy_list = set(actual_energy_countries.columns)
+
+    week_ago_load_list = set(week_ago_load_countries.columns)
+    today_load_list = set(actual_load_countries.columns)
+
+    completely_missing_energy = week_ago_energy_list - today_energy_list
+    completely_missing_load = week_ago_load_list - today_load_list
+
+    week_ago_energy_with_time = week_ago_energy_countries.copy()
+    week_ago_energy_with_time['time'] = week_ago_energy_with_time.index.strftime('%H:%M')
+    week_ago_energy_avg = week_ago_energy_with_time.groupby('time').mean(numeric_only=True)
+
+    week_ago_load_with_time = week_ago_load_countries.copy()
+    week_ago_load_with_time['time'] = week_ago_load_with_time.index.strftime('%H:%M')
+    week_ago_load_avg = week_ago_load_with_time.groupby('time').mean(numeric_only=True)
+
+    projected_df = actual_df.copy()
+    missing_by_time = {}
+
+    for i in range(len(actual_df)):
+        time_str = actual_df.iloc[i]['time']
+        timestamp = actual_df.iloc[i]['timestamp']
+
+        missing_countries = []
+        projected_energy_total = 0
+        projected_load_total = 0
+        has_missing_data = False
+
+        if timestamp in actual_energy_countries.index:
+            actual_energy_row = actual_energy_countries.loc[timestamp]
+
+            for country in today_energy_list:
+                actual_val = actual_energy_row[country]
+
+                if pd.isna(actual_val) or actual_val < 1:
+                    missing_countries.append(country)
+                    has_missing_data = True
+                    if time_str in week_ago_energy_avg.index and country in week_ago_energy_avg.columns:
+                        proj_val = week_ago_energy_avg.loc[time_str, country]
+                        if not pd.isna(proj_val):
+                            projected_energy_total += proj_val
+                else:
+                    projected_energy_total += actual_val
+
+        for country in completely_missing_energy:
+            if country not in missing_countries:
+                missing_countries.append(country)
+            has_missing_data = True
+            if time_str in week_ago_energy_avg.index and country in week_ago_energy_avg.columns:
+                proj_val = week_ago_energy_avg.loc[time_str, country]
+                if not pd.isna(proj_val):
+                    projected_energy_total += proj_val
+
+        if timestamp in actual_load_countries.index:
+            actual_load_row = actual_load_countries.loc[timestamp]
+
+            for country in today_load_list:
+                actual_val = actual_load_row[country]
+
+                if pd.isna(actual_val) or actual_val < 1:
+                    has_missing_data = True
+                    if time_str in week_ago_load_avg.index and country in week_ago_load_avg.columns:
+                        proj_val = week_ago_load_avg.loc[time_str, country]
+                        if not pd.isna(proj_val):
+                            projected_load_total += proj_val
+                else:
+                    projected_load_total += actual_val
+
+        for country in completely_missing_load:
+            has_missing_data = True
+            if time_str in week_ago_load_avg.index and country in week_ago_load_avg.columns:
+                proj_val = week_ago_load_avg.loc[time_str, country]
+                if not pd.isna(proj_val):
+                    projected_load_total += proj_val
+
+        if has_missing_data:
+            if missing_countries:
+                missing_by_time[time_str] = sorted(set(missing_countries))
+
+            projected_df.iloc[i, projected_df.columns.get_loc('energy_production')] = projected_energy_total
+            projected_df.iloc[i, projected_df.columns.get_loc('total_load')] = projected_load_total
+
+            if projected_load_total > 0:
+                projected_df.iloc[i, projected_df.columns.get_loc('energy_percentage')] = np.clip(
+                    (projected_energy_total / projected_load_total) * 100, 0, 100
+                )
+
+    if missing_by_time:
+        all_missing = set()
+        for countries in missing_by_time.values():
+            all_missing.update(countries)
+        print(f"  Missing: {', '.join(sorted(all_missing))}")
+
+    return projected_df
 
 
-def create_intraday_plot(all_data, all_country_data, source_type, output_file):
+def calculate_daily_statistics(data_dict):
     """
-    Create intraday comparison plot
+    Calculate daily statistics (EXACT from working script)
     """
-    source_name = DISPLAY_NAMES.get(source_type, source_type.capitalize())
-    
-    fig, ax = plt.subplots(figsize=(20, 9))
-    
+    standard_times = []
+    for hour in range(24):
+        for minute in [0, 15, 30, 45]:
+            standard_times.append(f"{hour:02d}:{minute:02d}")
+
+    stats = {}
+
+    for period_name, df in data_dict.items():
+        if len(df) == 0:
+            continue
+
+        if period_name in ['today', 'yesterday', 'today_projected', 'yesterday_projected']:
+            time_indexed = df.groupby('time')[['energy_production', 'total_load', 'energy_percentage']].mean()
+
+            aligned_energy = time_indexed['energy_production'].reindex(standard_times)
+            aligned_load = time_indexed['total_load'].reindex(standard_times)
+            aligned_percentage = time_indexed['energy_percentage'].reindex(standard_times)
+
+            if period_name in ['today', 'today_projected']:
+                current_time = pd.Timestamp.now(tz='Europe/Brussels')
+                cutoff_time = current_time - timedelta(hours=2)
+                cutoff_time = cutoff_time.floor('15T')
+
+                try:
+                    cutoff_time_str = cutoff_time.strftime('%H:%M')
+                    cutoff_idx = standard_times.index(cutoff_time_str)
+                except ValueError:
+                    cutoff_idx = len([t for t in standard_times if t <= cutoff_time_str])
+
+                aligned_energy.iloc[:cutoff_idx] = aligned_energy.iloc[:cutoff_idx].interpolate()
+                aligned_load.iloc[:cutoff_idx] = aligned_load.iloc[:cutoff_idx].interpolate()
+                aligned_percentage.iloc[:cutoff_idx] = aligned_percentage.iloc[:cutoff_idx].interpolate()
+
+                aligned_energy.iloc[cutoff_idx:] = np.nan
+                aligned_load.iloc[cutoff_idx:] = np.nan
+                aligned_percentage.iloc[cutoff_idx:] = np.nan
+            else:
+                aligned_energy = aligned_energy.interpolate()
+                aligned_load = aligned_load.interpolate()
+                aligned_percentage = aligned_percentage.interpolate()
+
+            aligned_energy = aligned_energy.fillna(0.1)
+            aligned_load = aligned_load.fillna(method='ffill').fillna(method='bfill').fillna(50000)
+            aligned_percentage = aligned_percentage.fillna(0)
+
+            stats[period_name] = {
+                'time_bins': standard_times,
+                'energy_mean': aligned_energy.values,
+                'energy_std': np.zeros(len(standard_times)),
+                'percentage_mean': aligned_percentage.values,
+                'percentage_std': np.zeros(len(standard_times)),
+            }
+
+        else:
+            unique_dates = df['date'].unique()
+
+            daily_energy_data = []
+            daily_percentage_data = []
+
+            for date in unique_dates:
+                day_data = df[df['date'] == date]
+
+                if len(day_data) > 0:
+                    time_indexed = day_data.set_index('time')
+                    time_indexed = time_indexed[['energy_production', 'energy_percentage']].groupby(
+                        time_indexed.index).mean()
+
+                    aligned_energy = time_indexed['energy_production'].reindex(standard_times).interpolate()
+                    aligned_percentage = time_indexed['energy_percentage'].reindex(standard_times).interpolate()
+
+                    aligned_energy = aligned_energy.fillna(0.1)
+                    aligned_percentage = aligned_percentage.fillna(0)
+
+                    daily_energy_data.append(aligned_energy.values)
+                    daily_percentage_data.append(aligned_percentage.values)
+
+            if daily_energy_data:
+                energy_array = np.array(daily_energy_data)
+                percentage_array = np.array(daily_percentage_data)
+
+                stats[period_name] = {
+                    'time_bins': standard_times,
+                    'energy_mean': np.mean(energy_array, axis=0),
+                    'energy_std': np.std(energy_array, axis=0),
+                    'percentage_mean': np.mean(percentage_array, axis=0),
+                    'percentage_std': np.std(percentage_array, axis=0),
+                }
+
+    return stats
+
+
+def create_time_axis():
+    """
+    Create time axis for 15-minute bins
+    """
+    times = []
+    for hour in range(24):
+        for minute in [0, 15, 30, 45]:
+            times.append(f"{hour:02d}:{minute:02d}")
+    return times
+
+
+def plot_analysis(stats_data, source_type, output_file):
+    """
+    Create plots - EXACT structure from working script (2 subplots side by side)
+    """
+    if not stats_data:
+        print("No data for plotting")
+        return None
+
+    print("\nCreating plots...")
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 9))
+
     colors = {
         'today': '#FF4444',
         'yesterday': '#FF8800',
         'week_ago': '#4444FF',
+        'year_ago': '#44AA44',
+        'two_years_ago': '#AA44AA',
         'today_projected': '#FF4444',
         'yesterday_projected': '#FF8800'
     }
-    
+
     linestyles = {
         'today': '-',
         'yesterday': '-',
         'week_ago': '-',
+        'year_ago': '-',
+        'two_years_ago': '-',
         'today_projected': '--',
         'yesterday_projected': '--'
     }
-    
+
     labels = {
         'today': 'Today',
         'yesterday': 'Yesterday',
-        'week_ago': 'Previous Week (avg)',
+        'week_ago': 'Previous Week (avg ± std)',
+        'year_ago': 'Same Period Last Year (avg ± std)',
+        'two_years_ago': 'Same Period 2 Years Ago (avg ± std)',
         'today_projected': 'Today (Projected)',
         'yesterday_projected': 'Yesterday (Projected)'
     }
+
+    time_labels = create_time_axis()
+
+    source_name = DISPLAY_NAMES[source_type]
     
-    # Plot order
-    plot_order = ['week_ago', 'yesterday', 'today', 'yesterday_projected', 'today_projected']
-    
-    # Create time axis (15-minute bins for 24 hours)
-    time_labels = []
-    for hour in range(24):
-        for minute in [0, 15, 30, 45]:
-            time_labels.append(f"{hour:02d}:{minute:02d}")
-    
-    # Cutoff time (2 hours ago)
-    cutoff_time = pd.Timestamp.now(tz='Europe/Brussels') - timedelta(hours=2)
-    cutoff_time = cutoff_time.floor('15T')
-    
-    max_power = 0
-    
+    ax1.set_title(f'EU {source_name} Energy Production\n15-minute Resolution',
+                  fontsize=18, fontweight='bold')
+    ax1.set_ylabel('Energy Production (MW)', fontsize=16, fontweight='bold')
+    ax1.set_xlabel('Time of Day (Brussels)', fontsize=14)
+
+    max_energy = 0
+
+    plot_order = ['week_ago', 'year_ago', 'two_years_ago', 'yesterday', 'today', 
+                  'yesterday_projected', 'today_projected']
+
     for period_name in plot_order:
-        if period_name not in all_data:
+        if period_name not in stats_data:
             continue
-        
-        data_series = all_data[period_name]
-        if data_series.empty:
+            
+        data = stats_data[period_name]
+        if 'energy_mean' not in data or len(data['energy_mean']) == 0:
             continue
-        
-        # Group by time of day
-        data_with_time = pd.DataFrame({'power': data_series})
-        data_with_time['time'] = data_with_time.index.strftime('%H:%M')
-        time_indexed = data_with_time.groupby('time')['power'].mean()
-        
-        # Align to standard times
-        aligned = time_indexed.reindex(time_labels).interpolate()
-        aligned = aligned.fillna(method='ffill').fillna(method='bfill').fillna(0)
-        
-        # Apply cutoff for today/projected
+
+        color = colors.get(period_name, 'gray')
+        linestyle = linestyles.get(period_name, '-')
+        label = labels.get(period_name, period_name)
+
+        x_values = np.arange(len(data['energy_mean']))
+        y_values = data['energy_mean'].copy()
+
+        max_energy = max(max_energy, np.nanmax(y_values))
+
         if period_name in ['today', 'today_projected']:
-            cutoff_time_str = cutoff_time.strftime('%H:%M')
-            try:
-                cutoff_idx = time_labels.index(cutoff_time_str)
-            except ValueError:
-                cutoff_idx = len([t for t in time_labels if t <= cutoff_time_str])
+            mask = ~np.isnan(y_values)
+            if np.any(mask):
+                x_values = x_values[mask]
+                y_values = y_values[mask]
+            else:
+                continue
+
+        ax1.plot(x_values, y_values, color=color, linestyle=linestyle, linewidth=3, label=label)
+
+        if period_name in ['week_ago', 'year_ago', 'two_years_ago'] and 'energy_std' in data:
+            std_values = data['energy_std']
+            if period_name == 'today':
+                std_values = std_values[mask] if np.any(mask) else std_values
+
+            upper_bound = y_values + std_values[:len(x_values)]
+            lower_bound = y_values - std_values[:len(x_values)]
+            max_energy = max(max_energy, np.nanmax(upper_bound))
+
+            ax1.fill_between(x_values, lower_bound, upper_bound, color=color, alpha=0.2)
+
+    ax1.grid(True, alpha=0.3)
+    ax1.tick_params(axis='both', labelsize=14)
+    ax1.set_xlim(0, len(time_labels))
+    ax1.set_ylim(0, max_energy * 1.05)
+
+    ax2.set_title(f'{source_name} as Percentage of Total EU Load\n15-minute Resolution',
+                  fontsize=18, fontweight='bold')
+    ax2.set_xlabel('Time of Day (Brussels)', fontsize=14)
+    ax2.set_ylabel('Percentage (%)', fontsize=16, fontweight='bold')
+
+    max_percentage = 0
+
+    for period_name in plot_order:
+        if period_name not in stats_data:
+            continue
             
-            # Keep data up to cutoff, NaN after
-            x_values = np.arange(cutoff_idx)
-            y_values = aligned.iloc[:cutoff_idx].values / 1000  # Convert to GW
-        else:
-            x_values = np.arange(len(aligned))
-            y_values = aligned.values / 1000  # Convert to GW
-        
-        if len(y_values) > 0:
-            max_power = max(max_power, np.nanmax(y_values))
-            
-            ax.plot(x_values, y_values,
-                   color=colors[period_name],
-                   linestyle=linestyles[period_name],
-                   linewidth=3 if period_name in ['today', 'today_projected'] else 2,
-                   label=labels[period_name],
-                   alpha=0.7 if 'projected' in period_name else 1.0)
-    
-    # Formatting
-    ax.set_title(f'EU {source_name} Energy Production\n15-minute Resolution',
-                fontsize=18, fontweight='bold')
-    ax.set_ylabel('Power Production (GW)', fontsize=16, fontweight='bold')
-    ax.set_xlabel('Time of Day (Brussels)', fontsize=14)
-    
-    ax.grid(True, alpha=0.3)
-    ax.set_xlim(0, len(time_labels))
-    
-    if max_power > 0:
-        ax.set_ylim(0, max_power * 1.05)
-    
-    # X-axis labels (every 2 hours)
-    tick_positions = np.arange(0, len(time_labels), 8)
-    ax.set_xticks(tick_positions)
-    ax.set_xticklabels([time_labels[i] for i in tick_positions], rotation=45)
-    
-    # Legend
-    ax.legend(loc='upper left', fontsize=12, framealpha=0.9)
-    
-    # Info text
-    today_countries = all_country_data.get('today')
-    if today_countries is not None and not today_countries.empty:
-        n_reporting = len(today_countries.columns)
+        data = stats_data[period_name]
+        if 'percentage_mean' not in data or len(data['percentage_mean']) == 0:
+            continue
+
+        color = colors.get(period_name, 'gray')
+        linestyle = linestyles.get(period_name, '-')
+        label = labels.get(period_name, period_name)
+
+        x_values = np.arange(len(data['percentage_mean']))
+        y_values = data['percentage_mean'].copy()
+
+        max_percentage = max(max_percentage, np.nanmax(y_values))
+
+        if period_name in ['today', 'today_projected']:
+            mask = ~np.isnan(y_values)
+            if np.any(mask):
+                x_values = x_values[mask]
+                y_values = y_values[mask]
+            else:
+                continue
+
+        ax2.plot(x_values, y_values, color=color, linestyle=linestyle, linewidth=3, label=label)
+
+        if period_name in ['week_ago', 'year_ago', 'two_years_ago'] and 'percentage_std' in data:
+            std_values = data['percentage_std']
+            if period_name == 'today':
+                std_values = std_values[mask] if np.any(mask) else std_values
+
+            upper_bound = y_values + std_values[:len(x_values)]
+            lower_bound = y_values - std_values[:len(x_values)]
+            max_percentage = max(max_percentage, np.nanmax(upper_bound))
+
+            ax2.fill_between(x_values, lower_bound, upper_bound, color=color, alpha=0.2)
+
+    ax2.grid(True, alpha=0.3)
+    ax2.tick_params(axis='both', labelsize=14)
+    ax2.set_xlim(0, len(time_labels))
+
+    if max_percentage > 0:
+        ax2.set_ylim(0, max_percentage * 1.05)
     else:
-        n_reporting = 0
-    
-    info_text = f"Reporting: {n_reporting}/{len(EU_COUNTRIES)} countries"
-    
-    if today_countries is not None and not today_countries.empty:
-        week_ago_countries = all_country_data.get('week_ago')
-        if week_ago_countries is not None and not week_ago_countries.empty:
-            missing = set(week_ago_countries.columns) - set(today_countries.columns)
-            if missing:
-                info_text += f"\nMissing: {', '.join(sorted(missing))}"
-    
-    ax.text(0.02, 0.98, info_text, transform=ax.transAxes,
-           fontsize=10, verticalalignment='top',
-           bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.7))
-    
-    plt.tight_layout()
+        ax2.set_ylim(0, 50)
+
+    tick_positions = np.arange(0, len(time_labels), 8)
+    for ax in [ax1, ax2]:
+        ax.set_xticks(tick_positions)
+        ax.set_xticklabels([time_labels[i] for i in tick_positions], rotation=45)
+
+    handles1, labels1 = ax1.get_legend_handles_labels()
+    fig.legend(handles1, labels1, loc='lower center', bbox_to_anchor=(0.5, -0.02),
+               ncol=3, fontsize=12, frameon=False, columnspacing=1.5)
+
+    plt.tight_layout(rect=[0, 0.08, 1, 0.98])
+
     plt.savefig(output_file, dpi=150, bbox_inches='tight')
-    print(f"\n✓ Plot saved: {output_file}")
+    print(f"Saved plot to {output_file}")
     plt.close()
+
+    return output_file
 
 
 def main():
@@ -445,7 +700,7 @@ def main():
     """
     parser = argparse.ArgumentParser(description='EU Energy Intraday Analysis')
     parser.add_argument('--source', required=True, 
-                       choices=list(ENERGY_SOURCE_MAPPING.keys()),
+                       choices=list(SOURCE_KEYWORDS.keys()),
                        help='Energy source to analyze')
     
     args = parser.parse_args()
@@ -462,30 +717,28 @@ def main():
     
     try:
         # Load data
-        all_data, all_country_data = load_intraday_data(args.source, api_key)
+        raw_data = load_intraday_data(args.source, api_key)
         
-        if not all_data:
-            print("\n✗ No data retrieved. Check:")
-            print("  - API key is valid")
-            print("  - Source keywords are correct")
-            print("  - ENTSO-E API is accessible")
+        if not raw_data:
+            print(f"✗ No data")
             sys.exit(1)
+        
+        # Calculate statistics
+        stats_data = calculate_daily_statistics(raw_data)
         
         # Create plot
         output_file = f'plots/{args.source.replace("-", "_")}_analysis.png'
-        create_intraday_plot(all_data, all_country_data, args.source, output_file)
+        plot_analysis(stats_data, args.source, output_file)
         
         # Create timestamp file
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')
-        with open(f'plots/{args.source.replace("-", "_")}_last_update.txt', 'w') as f:
-            f.write(timestamp)
+        with open('plots/last_update.html', 'w') as f:
+            f.write(f'<p>Last updated: {timestamp}</p>')
         
-        print("\n" + "=" * 60)
-        print("✓ ANALYSIS COMPLETE")
-        print("=" * 60)
+        print(f"\n✓ COMPLETE! Plot saved to {output_file}")
         
     except Exception as e:
-        print(f"\n✗ Error: {e}")
+        print(f"✗ Error: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)
