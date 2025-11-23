@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monthly Trends - EU Energy Analysis</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <span class="nav-title">EU Energy Analysis</span>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="live.html">Live</a>
+                <a href="monthly.html" class="active">Monthly</a>
+                <a href="trends.html">Trends</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <header class="page-header">
+            <h1>Monthly Energy Production Trends</h1>
+            <p class="subtitle">10-year monthly comparison (2015-2025)</p>
+        </header>
+
+        <div class="info-box">
+            <p><strong>Data Period:</strong> 2015-2025 (current year shows partial data)</p>
+            <p><strong>Left Charts:</strong> Absolute production in GWh | <strong>Right Charts:</strong> Percentage of total generation</p>
+        </div>
+
+        <div class="chart-section">
+            <div class="chart-container">
+                <h2>Solar Energy Production</h2>
+                <img src="plots/eu_monthly_solar_combined_10years.png" 
+                     alt="Monthly Solar Production Trends" 
+                     class="chart-img">
+                <p class="chart-caption">Showing strong seasonal variation with peak production in summer months and steady growth year-over-year</p>
+            </div>
+
+            <div class="chart-container">
+                <h2>Wind Energy Production</h2>
+                <img src="plots/eu_monthly_wind_total_combined_10years.png" 
+                     alt="Monthly Wind Production Trends" 
+                     class="chart-img">
+                <p class="chart-caption">Peak production typically in winter months with significant year-to-year growth</p>
+            </div>
+
+            <div class="chart-container">
+                <h2>Hydro Energy Production</h2>
+                <img src="plots/eu_monthly_hydro_combined_10years.png" 
+                     alt="Monthly Hydro Production Trends" 
+                     class="chart-img">
+                <p class="chart-caption">Seasonal patterns influenced by precipitation and snowmelt, with variations across years</p>
+            </div>
+
+            <div class="chart-container">
+                <h2>Total Renewable Energy Production</h2>
+                <img src="plots/eu_monthly_total_renewable_combined_10years.png" 
+                     alt="Monthly Total Renewable Production Trends" 
+                     class="chart-img">
+                <p class="chart-caption">Combined renewable energy showing steady increase in both absolute production and percentage of total generation</p>
+            </div>
+        </div>
+
+        <div class="insights-box">
+            <h3>Key Insights</h3>
+            <ul>
+                <li>Solar production shows strong seasonality with 3-4x variation between summer and winter</li>
+                <li>Wind production is counter-seasonal to solar, with higher output in winter months</li>
+                <li>Combined renewables benefit from this complementary seasonal pattern</li>
+                <li>Renewable percentage of total generation has grown significantly across all months</li>
+            </ul>
+        </div>
+    </div>
+
+    <footer>
+        <p>Built with data from <a href="https://transparency.entsoe.eu/" target="_blank">ENTSO-E</a> | 
+           Source code on <a href="https://github.com/afratzl/eu-energy-analysis" target="_blank">GitHub</a></p>
+    </footer>
+</body>
+</html>
