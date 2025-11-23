@@ -653,10 +653,10 @@ def plot_wind_analysis(stats_data, wind_type='total'):
         ax.set_xticklabels([time_labels[i] for i in tick_positions], rotation=45)
 
     handles1, labels1 = ax1.get_legend_handles_labels()
-    fig.legend(handles1, labels1, loc='lower center', bbox_to_anchor=(0.5, 0.02),
-               ncol=4, fontsize=14, frameon=False)
+    fig.legend(handles1, labels1, loc='lower center', bbox_to_anchor=(0.5, -0.02),
+               ncol=3, fontsize=12, frameon=False, columnspacing=1.5)
 
-    plt.tight_layout(rect=[0, 0.06, 1, 0.98])
+    plt.tight_layout(rect=[0, 0.08, 1, 0.98])
 
     # Save the plot
     output_file = f'plots/wind_analysis.png'
