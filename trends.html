@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historical Analysis - EU Energy Analysis</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <span class="nav-title">EU Energy Analysis</span>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="live.html">Live</a>
+                <a href="monthly.html">Monthly</a>
+                <a href="trends.html" class="active">Trends</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <header class="page-header">
+            <h1>Historical Energy Analysis</h1>
+            <p class="subtitle">Long-term trends and energy transition data (2015-2025)</p>
+        </header>
+
+        <!-- PERIOD COMPARISONS SECTION -->
+        <section class="trends-section">
+            <h2 class="section-title">Period Comparisons</h2>
+            <p class="section-description">Monthly mean production by 5-year periods, showing evolution of the energy mix</p>
+
+            <div class="chart-container">
+                <h3>All Energy Sources: 2015-2019</h3>
+                <img src="plots/eu_monthly_energy_sources_mean_2015_2019_combined.png" 
+                     alt="Energy Sources 2015-2019" 
+                     class="chart-img">
+                <p class="chart-caption">Baseline period showing the starting point of Europe's energy transition</p>
+            </div>
+
+            <div class="chart-container">
+                <h3>All Energy Sources: 2020-2024</h3>
+                <img src="plots/eu_monthly_energy_sources_mean_2020_2024_combined.png" 
+                     alt="Energy Sources 2020-2024" 
+                     class="chart-img">
+                <p class="chart-caption">Acceleration period with significant renewable growth and fossil fuel reduction</p>
+            </div>
+
+            <div class="chart-container">
+                <h3>All Energy Sources: 2025-2029</h3>
+                <img src="plots/eu_monthly_energy_sources_mean_2025_2029_combined.png" 
+                     alt="Energy Sources 2025-2029" 
+                     class="chart-img">
+                <p class="chart-caption">Current period (partial data) showing continued renewable expansion</p>
+            </div>
+
+            <div class="chart-container">
+                <h3>Renewable vs Non-Renewable: 2015-2019</h3>
+                <img src="plots/eu_monthly_renewable_vs_nonrenewable_mean_2015_2019_combined.png" 
+                     alt="Renewable vs Non-Renewable 2015-2019" 
+                     class="chart-img">
+                <p class="chart-caption">Starting period with non-renewables dominating the energy mix</p>
+            </div>
+
+            <div class="chart-container">
+                <h3>Renewable vs Non-Renewable: 2020-2024</h3>
+                <img src="plots/eu_monthly_renewable_vs_nonrenewable_mean_2020_2024_combined.png" 
+                     alt="Renewable vs Non-Renewable 2020-2024" 
+                     class="chart-img">
+                <p class="chart-caption">Crossover period with renewables rapidly catching up to non-renewables</p>
+            </div>
+
+            <div class="chart-container">
+                <h3>Renewable vs Non-Renewable: 2025-2029</h3>
+                <img src="plots/eu_monthly_renewable_vs_nonrenewable_mean_2025_2029_combined.png" 
+                     alt="Renewable vs Non-Renewable 2025-2029" 
+                     class="chart-img">
+                <p class="chart-caption">Current period showing renewables approaching or exceeding 50% in many months</p>
+            </div>
+        </section>
+
+        <!-- ANNUAL EVOLUTION SECTION -->
+        <section class="trends-section">
+            <h2 class="section-title">Annual Evolution</h2>
+            <p class="section-description">Year-by-year trends showing the transformation of Europe's energy system</p>
+
+            <div class="chart-container">
+                <h3>Annual Renewable Energy Trends</h3>
+                <img src="plots/eu_annual_renewable_trends_combined.png" 
+                     alt="Annual Renewable Trends" 
+                     class="chart-img">
+                <p class="chart-caption">Solar and wind showing exponential growth, while hydro remains relatively stable</p>
+            </div>
+
+            <div class="chart-container">
+                <h3>Annual Non-Renewable Energy Trends</h3>
+                <img src="plots/eu_annual_non_renewable_trends_combined.png" 
+                     alt="Annual Non-Renewable Trends" 
+                     class="chart-img">
+                <p class="chart-caption">Coal declining sharply, gas fluctuating with market conditions, nuclear relatively stable</p>
+            </div>
+
+            <div class="chart-container">
+                <h3>The Energy Transition</h3>
+                <img src="plots/eu_annual_renewable_vs_non_renewable_combined.png" 
+                     alt="Energy Transition" 
+                     class="chart-img">
+                <p class="chart-caption">The big picture: renewables rising, non-renewables falling - Europe's energy transition in action</p>
+            </div>
+
+            <div class="chart-container">
+                <h3>Year-over-Year Change vs 2015 Baseline</h3>
+                <img src="plots/eu_annual_yoy_change_vs_2015.png" 
+                     alt="YoY Change vs 2015" 
+                     class="chart-img">
+                <p class="chart-caption">Percentage change from 2015 baseline showing dramatic renewable growth and fossil fuel decline</p>
+            </div>
+        </section>
+
+        <!-- KEY FINDINGS -->
+        <div class="insights-box">
+            <h3>Key Findings</h3>
+            <ul>
+                <li><strong>Renewable Growth:</strong> Solar and wind have more than doubled since 2015</li>
+                <li><strong>Coal Phase-Out:</strong> Coal generation has declined by over 50% in the past decade</li>
+                <li><strong>Seasonal Patterns:</strong> Wind and solar complement each other seasonally</li>
+                <li><strong>Energy Transition:</strong> Renewables now approach or exceed 50% in many periods</li>
+                <li><strong>Nuclear Stability:</strong> Nuclear remains a significant baseload contributor</li>
+                <li><strong>Gas Fluctuation:</strong> Natural gas acts as a flexible backup during transition</li>
+            </ul>
+        </div>
+    </div>
+
+    <footer>
+        <p>Built with data from <a href="https://transparency.entsoe.eu/" target="_blank">ENTSO-E</a> | 
+           Source code on <a href="https://github.com/afratzl/eu-energy-analysis" target="_blank">GitHub</a></p>
+    </footer>
+</body>
+</html>
