@@ -1,0 +1,35 @@
+name: Update Wind Analysis
+on:
+  schedule:
+    - cron: '0 * * * *'  # Every hour at minute 0
+  workflow_dispatch:  # Allows manual trigger
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          
+      - name: Install dependencies
+        run: |
+          pip install entsoe-py pandas matplotlib numpy
+          
+      - name: Run wind analysis
+        env:
+          ENTSOE_API_KEY: ${{ secrets.ENTSOE_API_KEY }}
+        run: python wind_analysis.py
+        
+      - name: Commit and push results
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+          git add plots/*.png
+          git add plots/*.html
+          git commit -m "Update wind analysis - $(date '+%Y-%m-%d %H:%M UTC')" || echo "No changes"
+          git push
