@@ -23,7 +23,7 @@ jobs:
       - name: Run wind analysis
         env:
           ENTSOE_API_KEY: ${{ secrets.ENTSOE_API_KEY }}
-        run: python wind_analysis.py
+        run: python scripts/wind_analysis.py
         
       - name: Commit and push results
         run: |
