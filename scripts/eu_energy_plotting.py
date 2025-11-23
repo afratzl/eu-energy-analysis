@@ -217,6 +217,33 @@ def create_all_charts(all_data):
                                               '#B22222'])  # Fire brick
     year_colors = [mcolors.rgb2hex(cmap(i / (n_years - 1))) for i in range(n_years)]
 
+    # Calculate Non-Renewables BEFORE creating charts
+    print("\n" + "=" * 60)
+    print("CALCULATING NON-RENEWABLES")
+    print("=" * 60)
+
+    if 'All Renewables' in all_data and 'Total Generation' in all_data:
+        print(f"  Creating All Non-Renewables...")
+
+        renewables_data = all_data['All Renewables']['year_data']
+        total_data = all_data['Total Generation']['year_data']
+
+        overlapping_years = set(renewables_data.keys()) & set(total_data.keys())
+
+        all_non_renewables_data = {'year_data': {}}
+
+        for year in overlapping_years:
+            all_non_renewables_data['year_data'][year] = {}
+
+            for month in range(1, 13):
+                total_gen = total_data[year].get(month, 0)
+                renewables_gen = renewables_data[year].get(month, 0)
+                non_renewables_gen = max(0, total_gen - renewables_gen)
+                all_non_renewables_data['year_data'][year][month] = non_renewables_gen
+
+        all_data['All Non-Renewables'] = all_non_renewables_data
+        print(f"  ✓ All Non-Renewables calculated")
+
     # COMBINED CHARTS: All major energy sources (Absolute + Percentage side-by-side)
     sources_to_plot = [
         'Solar', 
@@ -481,33 +508,6 @@ def create_all_charts(all_data):
             filename = f'plots/eu_monthly_energy_sources_mean_{period_name_clean}_combined.png'
             plt.savefig(filename, dpi=300, bbox_inches='tight')
             print(f"  Chart saved as: {filename}")
-
-    # Calculate Non-Renewables
-    print("\n" + "=" * 60)
-    print("CALCULATING NON-RENEWABLES")
-    print("=" * 60)
-
-    if 'All Renewables' in all_data and 'Total Generation' in all_data:
-        print(f"  Creating All Non-Renewables...")
-
-        renewables_data = all_data['All Renewables']['year_data']
-        total_data = all_data['Total Generation']['year_data']
-
-        overlapping_years = set(renewables_data.keys()) & set(total_data.keys())
-
-        all_non_renewables_data = {'year_data': {}}
-
-        for year in overlapping_years:
-            all_non_renewables_data['year_data'][year] = {}
-
-            for month in range(1, 13):
-                total_gen = total_data[year].get(month, 0)
-                renewables_gen = renewables_data[year].get(month, 0)
-                non_renewables_gen = max(0, total_gen - renewables_gen)
-                all_non_renewables_data['year_data'][year][month] = non_renewables_gen
-
-        all_data['All Non-Renewables'] = all_non_renewables_data
-        print(f"  ✓ All Non-Renewables calculated")
 
     # Renewable vs Non-Renewable by Period (COMBINED: Absolute + Percentage)
     print("\n" + "=" * 60)
@@ -1033,6 +1033,7 @@ def main():
     print("  ✓ Full-screen display")
     print("  ✓ ENTSO-E colors")
     print("  ✓ Wind renamed from 'Wind Total' to 'Wind'")
+    print("  ✓ All Non-Renewables calculated before chart creation")
     print("=" * 60)
 
     # Verify environment variables are set
