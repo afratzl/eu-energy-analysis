@@ -17,12 +17,23 @@
             color: #2c3e50;
             text-align: center;
             margin-bottom: 10px;
+            font-size: 2em;
+        }
+        /* Mobile-friendly title */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.5em;
+            }
+            body {
+                padding: 10px;
+            }
         }
         .timestamp {
             text-align: center;
             color: #7f8c8d;
             margin-bottom: 30px;
             font-style: italic;
+            font-size: 0.9em;
         }
         .plot-container {
             background: white;
@@ -30,6 +41,11 @@
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             margin-bottom: 20px;
+        }
+        @media (max-width: 768px) {
+            .plot-container {
+                padding: 10px;
+            }
         }
         img {
             width: 100%;
@@ -41,6 +57,7 @@
             color: #95a5a6;
             margin-top: 40px;
             padding: 20px;
+            font-size: 0.9em;
         }
     </style>
 </head>
@@ -51,15 +68,14 @@
     </div>
     
     <div class="plot-container">
-        <h2>Total Wind Energy Production</h2>
-        <img src="plots/wind_analysis.png" alt="Wind Analysis" id="plot-img">
+        <img src="plots/wind_analysis.png" alt="EU Wind Energy Analysis" id="plot-img">
     </div>
     
     <div class="footer">
         <p>Data from ENTSO-E Transparency Platform</p>
         <p>Updated automatically every hour</p>
         <p><a href="https://github.com/afratzl/eu-wind-analysis">View on GitHub</a></p>
-        <p style="margin-top: 20px; font-size: 14px; color: #b0b0b0;">
+        <p style="margin-top: 20px; font-size: 0.9em; color: #b0b0b0;">
             Created by Alex Fratzl with the help of Claude Sonnet 4.5
         </p>
     </div>
