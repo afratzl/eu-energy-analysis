@@ -442,7 +442,7 @@ def create_all_charts(all_data):
                     else:
                         monthly_means_pct[source_name].append(0)
 
-            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
+            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 20))
 
             for source_name in available_sources:
                 color = ENTSOE_COLORS.get(source_name, 'black')
@@ -468,13 +468,13 @@ def create_all_charts(all_data):
             ax2.grid(True, linestyle='--', alpha=0.7)
 
             handles, labels = ax1.get_legend_handles_labels()
-            fig.legend(handles, labels, loc='lower center', bbox_to_anchor=(0.5, 0.01), ncol=5,
+            fig.legend(handles, labels, loc='lower center', bbox_to_anchor=(0.5, -0.02), ncol=5,
                        fontsize=14, frameon=False)
 
             fig.suptitle(f'Monthly Mean Energy Sources: {period["name"]}',
-                         fontsize=24, fontweight='bold', y=0.97)
+                         fontsize=24, fontweight='bold', y=0.995)
 
-            plt.tight_layout(rect=[0, 0.06, 1, 0.96])
+            plt.tight_layout(rect=[0, 0.02, 1, 0.985])
 
             period_name_clean = period['name'].replace('-', '_')
             filename = f'plots/eu_monthly_energy_sources_mean_{period_name_clean}_combined.png'
@@ -563,7 +563,7 @@ def create_all_charts(all_data):
                     else:
                         monthly_means_pct[category_name].append(0)
 
-            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
+            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 20))
 
             for category_name in ['All Renewables', 'All Non-Renewables']:
                 color = ENTSOE_COLORS[category_name]
@@ -589,13 +589,13 @@ def create_all_charts(all_data):
             ax2.grid(True, linestyle='--', alpha=0.7)
 
             handles, labels = ax1.get_legend_handles_labels()
-            fig.legend(handles, labels, loc='lower center', bbox_to_anchor=(0.5, 0.01), ncol=2,
+            fig.legend(handles, labels, loc='lower center', bbox_to_anchor=(0.5, -0.02), ncol=2,
                        fontsize=16, frameon=False)
 
             fig.suptitle(f'Monthly Mean Renewable vs Non-Renewable: {period["name"]}',
-                         fontsize=24, fontweight='bold', y=0.97)
+                         fontsize=24, fontweight='bold', y=0.995)
 
-            plt.tight_layout(rect=[0, 0.05, 1, 0.96])
+            plt.tight_layout(rect=[0, 0.02, 1, 0.985])
 
             period_name_clean = period['name'].replace('-', '_')
             filename = f'plots/eu_monthly_renewable_vs_nonrenewable_mean_{period_name_clean}_combined.png'
@@ -662,7 +662,7 @@ def create_all_charts(all_data):
     if available_renewables and 'Total Generation' in annual_totals:
         print("\nCreating Annual Renewable Trends...")
 
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 20))
 
         lines_plotted = 0
         for source_name in available_renewables:
@@ -711,13 +711,13 @@ def create_all_charts(all_data):
             ax2.grid(True, linestyle='--', alpha=0.7)
 
             handles, labels = ax1.get_legend_handles_labels()
-            fig.legend(handles, labels, loc='lower center', bbox_to_anchor=(0.5, 0.01), ncol=len(available_renewables),
+            fig.legend(handles, labels, loc='lower center', bbox_to_anchor=(0.5, -0.02), ncol=len(available_renewables),
                        fontsize=14, frameon=False)
 
             fig.suptitle('Annual EU Renewable Energy Production Trends',
-                         fontsize=24, fontweight='bold', y=0.97)
+                         fontsize=24, fontweight='bold', y=0.995)
 
-            plt.tight_layout(rect=[0, 0.05, 1, 0.96])
+            plt.tight_layout(rect=[0, 0.02, 1, 0.985])
 
             filename = 'plots/eu_annual_renewable_trends_combined.png'
             plt.savefig(filename, dpi=150, bbox_inches='tight')
@@ -728,7 +728,7 @@ def create_all_charts(all_data):
     if available_non_renewables and 'Total Generation' in annual_totals:
         print("\nCreating Annual Non-Renewable Trends...")
 
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 20))
 
         lines_plotted = 0
         for source_name in available_non_renewables:
@@ -777,13 +777,13 @@ def create_all_charts(all_data):
             ax2.grid(True, linestyle='--', alpha=0.7)
 
             handles, labels = ax1.get_legend_handles_labels()
-            fig.legend(handles, labels, loc='lower center', bbox_to_anchor=(0.5, 0.01),
+            fig.legend(handles, labels, loc='lower center', bbox_to_anchor=(0.5, -0.02),
                        ncol=len(available_non_renewables), fontsize=14, frameon=False)
 
             fig.suptitle('Annual EU Non-Renewable Energy Production Trends',
-                         fontsize=24, fontweight='bold', y=0.97)
+                         fontsize=24, fontweight='bold', y=0.995)
 
-            plt.tight_layout(rect=[0, 0.05, 1, 0.96])
+            plt.tight_layout(rect=[0, 0.02, 1, 0.985])
 
             filename = 'plots/eu_annual_non_renewable_trends_combined.png'
             plt.savefig(filename, dpi=150, bbox_inches='tight')
@@ -794,7 +794,7 @@ def create_all_charts(all_data):
     if available_totals and 'Total Generation' in annual_totals:
         print("\nCreating Annual Renewables vs Non-Renewables...")
 
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 20))
 
         lines_plotted = 0
         for source_name in available_totals:
@@ -843,13 +843,13 @@ def create_all_charts(all_data):
             ax2.grid(True, linestyle='--', alpha=0.7)
 
             handles, labels = ax1.get_legend_handles_labels()
-            fig.legend(handles, labels, loc='lower center', bbox_to_anchor=(0.5, 0.01), ncol=2,
+            fig.legend(handles, labels, loc='lower center', bbox_to_anchor=(0.5, -0.02), ncol=2,
                        fontsize=16, frameon=False)
 
             fig.suptitle('Annual EU Energy Transition: Renewables vs Non-Renewables',
-                         fontsize=24, fontweight='bold', y=0.97)
+                         fontsize=24, fontweight='bold', y=0.995)
 
-            plt.tight_layout(rect=[0, 0.05, 1, 0.96])
+            plt.tight_layout(rect=[0, 0.02, 1, 0.985])
 
             filename = 'plots/eu_annual_renewable_vs_non_renewable_combined.png'
             plt.savefig(filename, dpi=150, bbox_inches='tight')
@@ -869,11 +869,11 @@ def create_all_charts(all_data):
         all_sources_for_yoy = available_renewables + available_non_renewables
         totals_for_yoy = ['All Renewables', 'All Non-Renewables']
 
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 20))
 
         all_yoy_values = []
 
-        # Left plot: All individual sources
+        # Top plot: All individual sources
         lines_plotted = 0
         for source_name in all_sources_for_yoy:
             if source_name in annual_totals and baseline_year in annual_totals[source_name]:
@@ -898,7 +898,7 @@ def create_all_charts(all_data):
                                  linewidth=4.5, markersize=9, label=source_name)
                         lines_plotted += 1
 
-        # Right plot: Just totals
+        # Bottom plot: Just totals
         for category_name in totals_for_yoy:
             if category_name in annual_totals and baseline_year in annual_totals[category_name]:
                 baseline_value = annual_totals[category_name][baseline_year]
@@ -953,13 +953,13 @@ def create_all_charts(all_data):
 
             all_handles = handles1 + handles2
             all_labels = labels1 + labels2
-            fig.legend(all_handles, all_labels, loc='lower center', bbox_to_anchor=(0.5, 0.01),
+            fig.legend(all_handles, all_labels, loc='lower center', bbox_to_anchor=(0.5, -0.02),
                        ncol=6, fontsize=13, frameon=False)
 
             fig.suptitle('Year-over-Year Change in EU Energy Production vs 2015 Baseline',
-                         fontsize=24, fontweight='bold', y=0.97)
+                         fontsize=24, fontweight='bold', y=0.995)
 
-            plt.tight_layout(rect=[0, 0.06, 1, 0.96])
+            plt.tight_layout(rect=[0, 0.02, 1, 0.985])
 
             filename = 'plots/eu_annual_yoy_change_vs_2015.png'
             plt.savefig(filename, dpi=150, bbox_inches='tight')
@@ -979,6 +979,7 @@ def main():
     print("EU ENERGY PLOTTER - MOBILE OPTIMIZED + ALL CHARTS")
     print("=" * 60)
     print("\nFEATURES:")
+    print("  ✓ ALL plots are VERTICAL (2 rows, 1 column)")
     print("  ✓ Individual source plots (titles IN the PNG)")
     print("  ✓ Monthly mean by period charts")
     print("  ✓ Renewable vs non-renewable by period")
