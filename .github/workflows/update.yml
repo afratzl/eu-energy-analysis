@@ -1,35 +1,131 @@
-name: Update Wind Analysis
+name: Update EU Energy Data and Plots
+
 on:
   schedule:
+    # Hourly: Update intraday plots (wind, and eventually solar/renewable)
     - cron: '0 * * * *'  # Every hour at minute 0
-  workflow_dispatch:  # Allows manual trigger
+    
+    # Daily at 3 AM UTC: Update historical data (current year only)
+    - cron: '0 3 * * *'  # 3 AM UTC daily
+    
+    # Monthly on 1st at 3 AM UTC: Full historical refresh (all years 2015-present)
+    # Note: This is handled automatically by the script checking if it's the 1st
+  
+  workflow_dispatch:  # Allow manual triggering
 
 jobs:
-  update:
+  # ============================================================================
+  # JOB 1: Update Intraday Plots (Hourly)
+  # ============================================================================
+  update-intraday:
     runs-on: ubuntu-latest
+    # Only run on hourly schedule OR manual trigger
+    if: github.event.schedule == '0 * * * *' || github.event_name == 'workflow_dispatch'
+    
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
         
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-          
-      - name: Install dependencies
-        run: |
-          pip install entsoe-py pandas matplotlib numpy scipy
-          
-      - name: Run wind analysis
-        env:
-          ENTSOE_API_KEY: ${{ secrets.ENTSOE_API_KEY }}
-        run: python scripts/wind_analysis.py
+    - name: Install dependencies for intraday analysis
+      run: |
+        pip install pandas requests matplotlib numpy pytz
         
-      - name: Commit and push results
-        run: |
-          git config user.name "GitHub Actions Bot"
-          git config user.email "actions@github.com"
-          git add plots/*.png
-          git add plots/*.html
-          git commit -m "Update wind analysis - $(date '+%Y-%m-%d %H:%M UTC')" || echo "No changes"
-          git push
+    - name: Run wind analysis
+      env:
+        ENTSOE_API_KEY: ${{ secrets.ENTSOE_API_KEY }}
+      run: |
+        python scripts/wind_analysis.py
+        
+    # TODO: Uncomment when solar_analysis.py is ready
+    # - name: Run solar analysis
+    #   env:
+    #     ENTSOE_API_KEY: ${{ secrets.ENTSOE_API_KEY }}
+    #   run: |
+    #     python scripts/solar_analysis.py
+        
+    # TODO: Uncomment when renewable_analysis.py is ready
+    # - name: Run renewable analysis
+    #   env:
+    #     ENTSOE_API_KEY: ${{ secrets.ENTSOE_API_KEY }}
+    #   run: |
+    #     python scripts/renewable_analysis.py
+        
+    - name: Commit and push intraday plots
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git add plots/
+        git diff --quiet && git diff --staged --quiet || (git commit -m "Update intraday plots [hourly]" && git push)
+
+  # ============================================================================
+  # JOB 2: Update Historical Data & Plots (Daily at 3 AM)
+  # ============================================================================
+  update-historical:
+    runs-on: ubuntu-latest
+    # Only run on daily 3 AM schedule OR manual trigger
+    if: github.event.schedule == '0 3 * * *' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+        
+    - name: Install dependencies for historical analysis
+      run: |
+        pip install pandas requests matplotlib numpy gspread google-auth google-auth-oauthlib google-auth-httplib2 entsoe-py
+        
+    - name: Determine update type
+      id: update_type
+      run: |
+        # Check if today is the 1st of the month
+        DAY_OF_MONTH=$(date +%d)
+        if [ "$DAY_OF_MONTH" = "01" ]; then
+          echo "type=full" >> $GITHUB_OUTPUT
+          echo "🗓️ Today is the 1st - Running FULL historical refresh (2015-present)"
+        else
+          echo "type=daily" >> $GITHUB_OUTPUT
+          echo "📅 Running DAILY historical update (current year only)"
+        fi
+        
+    - name: Collect historical data from ENTSO-E
+      env:
+        ENTSOE_API_KEY: ${{ secrets.ENTSOE_API_KEY }}
+        GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+      run: |
+        echo "Running data collection (update type: ${{ steps.update_type.outputs.type }})"
+        # Script automatically detects if it's the 1st and does full refresh
+        python scripts/eu_energy_data_collection.py
+        
+    - name: Generate historical plots from Google Sheets
+      env:
+        GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+      run: |
+        echo "Generating historical plots..."
+        python scripts/eu_energy_plotting.py
+        
+    - name: Commit and push historical plots
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git add plots/
+        git diff --quiet && git diff --staged --quiet || (git commit -m "Update historical plots [${{ steps.update_type.outputs.type }}]" && git push)
+    
+    - name: Summary
+      run: |
+        echo "✅ Historical data update complete!"
+        echo "Update type: ${{ steps.update_type.outputs.type }}"
+        if [ "${{ steps.update_type.outputs.type }}" = "full" ]; then
+          echo "📊 Full refresh: All years (2015-present) updated in Google Sheets"
+        else
+          echo "📊 Daily update: Current year updated in Google Sheets"
+        fi
+        echo "🖼️ All 14 historical plots regenerated"
