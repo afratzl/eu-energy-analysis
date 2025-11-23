@@ -33,7 +33,7 @@ jobs:
         
     - name: Install dependencies for intraday analysis
       run: |
-        pip install pandas requests matplotlib numpy pytz entsoe-py
+        pip install pandas requests matplotlib numpy pytz entsoe-py scipy
         
     - name: Run wind analysis
       env:
