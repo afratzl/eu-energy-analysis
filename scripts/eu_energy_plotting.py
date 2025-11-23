@@ -233,8 +233,8 @@ def create_all_charts(all_data):
                 if year in year_data:
                     monthly_data = year_data[year]
                     for month in range(1, 13):
-                        val = monthly_data.get(month, 0) / 1000  # Convert to TWh
-                        max_abs_value = max(max_abs_value, val)
+                        val = monthly_data.get(month, 0)
+                        max_abs_value = max(max_abs_value, val / 1000)  # Compare in TWh for display
 
                         if year in total_data:
                             total_val = total_data[year].get(month, 0)
@@ -274,16 +274,17 @@ def create_all_charts(all_data):
                 months_to_show = range(1, 13)
 
             months = [month_names[month - 1] for month in months_to_show]
-            values = [monthly_data.get(month, 0) / 1000 for month in months_to_show]  # Convert to TWh
+            values_gwh = [monthly_data.get(month, 0) for month in months_to_show]  # Keep GWh for percentages
+            values_twh = [val / 1000 for val in values_gwh]  # Convert to TWh for display
 
             color = year_colors[i % len(year_colors)]
-            ax1.plot(months, values, marker='o', color=color, linewidth=3, markersize=9, label=str(year))
+            ax1.plot(months, values_twh, marker='o', color=color, linewidth=3, markersize=9, label=str(year))
 
             if year in total_data:
                 total_monthly = total_data[year]
                 percentages = []
-                for month in months_to_show:
-                    source_val = monthly_data.get(month, 0)
+                for i_month, month in enumerate(months_to_show):
+                    source_val = values_gwh[i_month]  # Use GWh for percentage calculation
                     total_val = total_monthly.get(month, 0)
                     if total_val > 0:
                         percentage = (source_val / total_val) * 100
@@ -351,14 +352,15 @@ def create_all_charts(all_data):
                 months_to_show = range(1, 13)
 
             months = [month_names[month - 1] for month in months_to_show]
-            values = [renewables_monthly.get(month, 0) / 1000 for month in months_to_show]  # Convert to TWh
+            values_gwh = [renewables_monthly.get(month, 0) for month in months_to_show]  # Keep GWh
+            values_twh = [val / 1000 for val in values_gwh]  # Convert to TWh
 
             color = year_colors[i % len(year_colors)]
-            ax1.plot(months, values, marker='o', color=color, linewidth=3, markersize=9, label=str(year))
+            ax1.plot(months, values_twh, marker='o', color=color, linewidth=3, markersize=9, label=str(year))
 
             percentages = []
-            for month in months_to_show:
-                renewables_val = renewables_monthly.get(month, 0)
+            for i_month, month in enumerate(months_to_show):
+                renewables_val = values_gwh[i_month]  # Use GWh for percentage
                 total_val = total_monthly.get(month, 0)
                 if total_val > 0:
                     percentage = (renewables_val / total_val) * 100
@@ -434,10 +436,10 @@ def create_all_charts(all_data):
                         total_monthly = total_data[year]
 
                         for month in range(1, 13):
-                            source_val = source_monthly.get(month, 0) / 1000  # Convert to TWh
+                            source_val = source_monthly.get(month, 0)  # Keep in GWh
                             total_val = total_monthly.get(month, 0)
 
-                            max_abs_all_periods = max(max_abs_all_periods, source_val)
+                            max_abs_all_periods = max(max_abs_all_periods, source_val / 1000)  # Compare in TWh
 
                             if total_val > 0:
                                 percentage = (source_val / total_val) * 100
@@ -474,7 +476,7 @@ def create_all_charts(all_data):
                         total_monthly = total_data[year]
 
                         for month in range(1, 13):
-                            source_val = source_monthly.get(month, 0) / 1000  # Convert to TWh
+                            source_val = source_monthly.get(month, 0)  # Keep in GWh
                             total_val = total_monthly.get(month, 0)
 
                             monthly_absolute[source_name][month].append(source_val)
@@ -507,7 +509,9 @@ def create_all_charts(all_data):
             for source_name in available_sources:
                 color = ENTSOE_COLORS.get(source_name, 'black')
 
-                ax1.plot(months, monthly_means_abs[source_name], marker='o', color=color,
+                # Convert to TWh for display
+                values_twh = [val / 1000 for val in monthly_means_abs[source_name]]
+                ax1.plot(months, values_twh, marker='o', color=color,
                          linewidth=3, markersize=9, label=source_name)
                 ax2.plot(months, monthly_means_pct[source_name], marker='o', color=color,
                          linewidth=3, markersize=9, label=source_name)
@@ -593,8 +597,8 @@ def create_all_charts(all_data):
                         category_monthly = category_data[year]
 
                         for month in range(1, 13):
-                            category_val = category_monthly.get(month, 0) / 1000  # Convert to TWh
-                            max_abs_renewable_periods = max(max_abs_renewable_periods, category_val)
+                            category_val = category_monthly.get(month, 0)  # Keep in GWh
+                            max_abs_renewable_periods = max(max_abs_renewable_periods, category_val / 1000)  # Compare in TWh
 
         # Add 10% margin
         max_abs_renewable_periods *= 1.1
@@ -626,7 +630,7 @@ def create_all_charts(all_data):
                         total_monthly = total_data[year]
 
                         for month in range(1, 13):
-                            category_val = category_monthly.get(month, 0) / 1000  # Convert to TWh
+                            category_val = category_monthly.get(month, 0)  # Keep in GWh
                             total_val = total_monthly.get(month, 0)
 
                             monthly_absolute[category_name][month].append(category_val)
@@ -659,7 +663,9 @@ def create_all_charts(all_data):
             for category_name in ['All Renewables', 'All Non-Renewables']:
                 color = ENTSOE_COLORS[category_name]
 
-                ax1.plot(month_names_abbr, monthly_means_abs[category_name], marker='o', color=color,
+                # Convert to TWh for display
+                values_twh = [val / 1000 for val in monthly_means_abs[category_name]]
+                ax1.plot(month_names_abbr, values_twh, marker='o', color=color,
                          linewidth=3, markersize=9, label=category_name)
                 ax2.plot(month_names_abbr, monthly_means_pct[category_name], marker='o', color=color,
                          linewidth=3, markersize=9, label=category_name)
