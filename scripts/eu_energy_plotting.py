@@ -447,23 +447,26 @@ def create_all_charts(all_data):
             for source_name in available_sources:
                 color = ENTSOE_COLORS.get(source_name, 'black')
 
-                values_twh = [val / 1000 for val in monthly_means_abs[source_name]]
-                ax1.plot(months, values_twh, marker='o', color=color,
+                # ax1 = PERCENTAGE (top)
+                ax1.plot(months, monthly_means_pct[source_name], marker='o', color=color,
                          linewidth=4.5, markersize=9, label=source_name)
-                ax2.plot(months, monthly_means_pct[source_name], marker='o', color=color,
+                
+                # ax2 = ABSOLUTE (bottom)
+                values_twh = [val / 1000 for val in monthly_means_abs[source_name]]
+                ax2.plot(months, values_twh, marker='o', color=color,
                          linewidth=4.5, markersize=9, label=source_name)
 
-            ax1.set_title('Production (TWh)', fontsize=22, fontweight='bold')
+            ax1.set_title('% of Total Generation', fontsize=22, fontweight='bold')
             ax1.set_xlabel('Month', fontsize=18)
-            ax1.set_ylabel('Energy (TWh)', fontsize=18)
-            ax1.set_ylim(0, max_abs_all_periods)
+            ax1.set_ylabel('Percentage (%)', fontsize=18)
+            ax1.set_ylim(0, max_pct_all_periods)
             ax1.tick_params(axis='both', labelsize=16)
             ax1.grid(True, linestyle='--', alpha=0.7)
 
-            ax2.set_title('% of Total Generation', fontsize=22, fontweight='bold')
+            ax2.set_title('Production (TWh)', fontsize=22, fontweight='bold')
             ax2.set_xlabel('Month', fontsize=18)
-            ax2.set_ylabel('Percentage (%)', fontsize=18)
-            ax2.set_ylim(0, max_pct_all_periods)
+            ax2.set_ylabel('Energy (TWh)', fontsize=18)
+            ax2.set_ylim(0, max_abs_all_periods)
             ax2.tick_params(axis='both', labelsize=16)
             ax2.grid(True, linestyle='--', alpha=0.7)
 
@@ -568,23 +571,26 @@ def create_all_charts(all_data):
             for category_name in ['All Renewables', 'All Non-Renewables']:
                 color = ENTSOE_COLORS[category_name]
 
-                values_twh = [val / 1000 for val in monthly_means_abs[category_name]]
-                ax1.plot(month_names_abbr, values_twh, marker='o', color=color,
+                # ax1 = PERCENTAGE (top)
+                ax1.plot(month_names_abbr, monthly_means_pct[category_name], marker='o', color=color,
                          linewidth=4.5, markersize=9, label=category_name)
-                ax2.plot(month_names_abbr, monthly_means_pct[category_name], marker='o', color=color,
+                
+                # ax2 = ABSOLUTE (bottom)
+                values_twh = [val / 1000 for val in monthly_means_abs[category_name]]
+                ax2.plot(month_names_abbr, values_twh, marker='o', color=color,
                          linewidth=4.5, markersize=9, label=category_name)
 
-            ax1.set_title('Production (TWh)', fontsize=22, fontweight='bold')
+            ax1.set_title('% of Total Generation', fontsize=22, fontweight='bold')
             ax1.set_xlabel('Month', fontsize=18)
-            ax1.set_ylabel('Energy (TWh)', fontsize=18)
-            ax1.set_ylim(0, max_abs_renewable_periods)
+            ax1.set_ylabel('Percentage (%)', fontsize=18)
+            ax1.set_ylim(0, 100)
             ax1.tick_params(axis='both', labelsize=16)
             ax1.grid(True, linestyle='--', alpha=0.7)
 
-            ax2.set_title('% of Total Generation', fontsize=22, fontweight='bold')
+            ax2.set_title('Production (TWh)', fontsize=22, fontweight='bold')
             ax2.set_xlabel('Month', fontsize=18)
-            ax2.set_ylabel('Percentage (%)', fontsize=18)
-            ax2.set_ylim(0, 100)
+            ax2.set_ylabel('Energy (TWh)', fontsize=18)
+            ax2.set_ylim(0, max_abs_renewable_periods)
             ax2.tick_params(axis='both', labelsize=16)
             ax2.grid(True, linestyle='--', alpha=0.7)
 
@@ -669,11 +675,9 @@ def create_all_charts(all_data):
             if source_name in annual_totals and len(annual_totals[source_name]) > 0:
                 years_list = sorted(annual_totals[source_name].keys())
 
-                values_twh = [annual_totals[source_name][year] / 1000 for year in years_list]
                 color = ENTSOE_COLORS.get(source_name, 'black')
-                ax1.plot(years_list, values_twh, marker='o', color=color,
-                         linewidth=4.5, markersize=9, label=source_name)
-
+                
+                # ax1 = PERCENTAGE (top)
                 source_years = set(annual_totals[source_name].keys())
                 total_years = set(annual_totals['Total Generation'].keys())
                 overlapping_years = source_years & total_years & set(years_list)
@@ -690,23 +694,28 @@ def create_all_charts(all_data):
                         else:
                             percentages.append(0)
 
-                    ax2.plot(pct_years, percentages, marker='o', color=color,
+                    ax1.plot(pct_years, percentages, marker='o', color=color,
                              linewidth=4.5, markersize=9, label=source_name)
+                
+                # ax2 = ABSOLUTE (bottom)
+                values_twh = [annual_totals[source_name][year] / 1000 for year in years_list]
+                ax2.plot(years_list, values_twh, marker='o', color=color,
+                         linewidth=4.5, markersize=9, label=source_name)
 
                 lines_plotted += 1
 
         if lines_plotted > 0:
-            ax1.set_title('Production (TWh)', fontsize=22, fontweight='bold')
+            ax1.set_title('% of Total Generation', fontsize=22, fontweight='bold')
             ax1.set_xlabel('Year', fontsize=18)
-            ax1.set_ylabel('Energy Production (TWh)', fontsize=18)
-            ax1.set_ylim(0, max_annual_twh)
+            ax1.set_ylabel('Percentage (%)', fontsize=18)
+            ax1.set_ylim(0, max_annual_pct)
             ax1.tick_params(axis='both', labelsize=16)
             ax1.grid(True, linestyle='--', alpha=0.7)
 
-            ax2.set_title('% of Total Generation', fontsize=22, fontweight='bold')
+            ax2.set_title('Production (TWh)', fontsize=22, fontweight='bold')
             ax2.set_xlabel('Year', fontsize=18)
-            ax2.set_ylabel('Percentage (%)', fontsize=18)
-            ax2.set_ylim(0, max_annual_pct)
+            ax2.set_ylabel('Energy Production (TWh)', fontsize=18)
+            ax2.set_ylim(0, max_annual_twh)
             ax2.tick_params(axis='both', labelsize=16)
             ax2.grid(True, linestyle='--', alpha=0.7)
 
@@ -735,11 +744,9 @@ def create_all_charts(all_data):
             if source_name in annual_totals and len(annual_totals[source_name]) > 0:
                 years_list = sorted(annual_totals[source_name].keys())
 
-                values_twh = [annual_totals[source_name][year] / 1000 for year in years_list]
                 color = ENTSOE_COLORS.get(source_name, 'black')
-                ax1.plot(years_list, values_twh, marker='o', color=color,
-                         linewidth=4.5, markersize=9, label=source_name)
-
+                
+                # ax1 = PERCENTAGE (top)
                 source_years = set(annual_totals[source_name].keys())
                 total_years = set(annual_totals['Total Generation'].keys())
                 overlapping_years = source_years & total_years & set(years_list)
@@ -756,23 +763,28 @@ def create_all_charts(all_data):
                         else:
                             percentages.append(0)
 
-                    ax2.plot(pct_years, percentages, marker='o', color=color,
+                    ax1.plot(pct_years, percentages, marker='o', color=color,
                              linewidth=4.5, markersize=9, label=source_name)
+                
+                # ax2 = ABSOLUTE (bottom)
+                values_twh = [annual_totals[source_name][year] / 1000 for year in years_list]
+                ax2.plot(years_list, values_twh, marker='o', color=color,
+                         linewidth=4.5, markersize=9, label=source_name)
 
                 lines_plotted += 1
 
         if lines_plotted > 0:
-            ax1.set_title('Production (TWh)', fontsize=22, fontweight='bold')
+            ax1.set_title('% of Total Generation', fontsize=22, fontweight='bold')
             ax1.set_xlabel('Year', fontsize=18)
-            ax1.set_ylabel('Energy Production (TWh)', fontsize=18)
-            ax1.set_ylim(0, max_annual_twh)
+            ax1.set_ylabel('Percentage (%)', fontsize=18)
+            ax1.set_ylim(0, max_annual_pct)
             ax1.tick_params(axis='both', labelsize=16)
             ax1.grid(True, linestyle='--', alpha=0.7)
 
-            ax2.set_title('% of Total Generation', fontsize=22, fontweight='bold')
+            ax2.set_title('Production (TWh)', fontsize=22, fontweight='bold')
             ax2.set_xlabel('Year', fontsize=18)
-            ax2.set_ylabel('Percentage (%)', fontsize=18)
-            ax2.set_ylim(0, max_annual_pct)
+            ax2.set_ylabel('Energy Production (TWh)', fontsize=18)
+            ax2.set_ylim(0, max_annual_twh)
             ax2.tick_params(axis='both', labelsize=16)
             ax2.grid(True, linestyle='--', alpha=0.7)
 
@@ -801,11 +813,9 @@ def create_all_charts(all_data):
             if source_name in annual_totals and len(annual_totals[source_name]) > 0:
                 years_list = sorted(annual_totals[source_name].keys())
 
-                values_twh = [annual_totals[source_name][year] / 1000 for year in years_list]
                 color = ENTSOE_COLORS[source_name]
-                ax1.plot(years_list, values_twh, marker='o', color=color,
-                         linewidth=4.5, markersize=9, label=source_name)
-
+                
+                # ax1 = PERCENTAGE (top)
                 source_years = set(annual_totals[source_name].keys())
                 total_years = set(annual_totals['Total Generation'].keys())
                 overlapping_years = source_years & total_years & set(years_list)
@@ -822,23 +832,28 @@ def create_all_charts(all_data):
                         else:
                             percentages.append(0)
 
-                    ax2.plot(pct_years, percentages, marker='o', color=color,
+                    ax1.plot(pct_years, percentages, marker='o', color=color,
                              linewidth=4.5, markersize=9, label=source_name)
+                
+                # ax2 = ABSOLUTE (bottom)
+                values_twh = [annual_totals[source_name][year] / 1000 for year in years_list]
+                ax2.plot(years_list, values_twh, marker='o', color=color,
+                         linewidth=4.5, markersize=9, label=source_name)
 
                 lines_plotted += 1
 
         if lines_plotted > 0:
-            ax1.set_title('Production (TWh)', fontsize=22, fontweight='bold')
+            ax1.set_title('% of Total Generation', fontsize=22, fontweight='bold')
             ax1.set_xlabel('Year', fontsize=18)
-            ax1.set_ylabel('Energy Production (TWh)', fontsize=18)
-            ax1.set_ylim(bottom=0)
+            ax1.set_ylabel('Percentage (%)', fontsize=18)
+            ax1.set_ylim(0, 100)
             ax1.tick_params(axis='both', labelsize=16)
             ax1.grid(True, linestyle='--', alpha=0.7)
 
-            ax2.set_title('% of Total Generation', fontsize=22, fontweight='bold')
+            ax2.set_title('Production (TWh)', fontsize=22, fontweight='bold')
             ax2.set_xlabel('Year', fontsize=18)
-            ax2.set_ylabel('Percentage (%)', fontsize=18)
-            ax2.set_ylim(0, 100)
+            ax2.set_ylabel('Energy Production (TWh)', fontsize=18)
+            ax2.set_ylim(bottom=0)
             ax2.tick_params(axis='both', labelsize=16)
             ax2.grid(True, linestyle='--', alpha=0.7)
 
