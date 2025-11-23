@@ -240,7 +240,7 @@ def create_all_charts(all_data):
         total_data = all_data['Total Generation']['year_data']
 
         # PLOT 1: Percentage
-        fig1, ax1 = plt.subplots(figsize=(10, 8))
+        fig1, ax1 = plt.subplots(figsize=(12, 10))
 
         for i, year in enumerate(years_available):
             if year not in year_data:
@@ -274,21 +274,21 @@ def create_all_charts(all_data):
                         linewidth=3.5, markersize=8, label=str(year))
 
         ax1.set_title(f'{source_name} % of Total Generation', 
-                     fontsize=32, fontweight='bold', pad=20)
-        ax1.set_xlabel('Month', fontsize=28, fontweight='bold', labelpad=15)
-        ax1.set_ylabel('Percentage (%)', fontsize=28, fontweight='bold', labelpad=15)
+                     fontsize=26, fontweight='bold', pad=20)
+        ax1.set_xlabel('Month', fontsize=22, fontweight='bold', labelpad=15)
+        ax1.set_ylabel('Percentage (%)', fontsize=22, fontweight='bold', labelpad=15)
         
         if source_name in total_sources:
             ax1.set_ylim(0, max_pct_totals)
         else:
             ax1.set_ylim(0, max_pct_individual)
             
-        ax1.tick_params(axis='both', labelsize=24)
+        ax1.tick_params(axis='both', labelsize=18)
         ax1.grid(True, alpha=0.3, linewidth=1.5)
 
         # Legend below - 5 columns, no frame
         ax1.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), 
-                  ncol=5, fontsize=22, frameon=False)
+                  ncol=5, fontsize=18, frameon=False)
 
         plt.tight_layout()
 
@@ -298,7 +298,7 @@ def create_all_charts(all_data):
         plt.close()
 
         # PLOT 2: Absolute
-        fig2, ax2 = plt.subplots(figsize=(10, 8))
+        fig2, ax2 = plt.subplots(figsize=(12, 10))
 
         for i, year in enumerate(years_available):
             if year not in year_data:
@@ -322,21 +322,21 @@ def create_all_charts(all_data):
                     linewidth=3.5, markersize=8, label=str(year))
 
         ax2.set_title(f'{source_name} Production (TWh)', 
-                     fontsize=32, fontweight='bold', pad=20)
-        ax2.set_xlabel('Month', fontsize=28, fontweight='bold', labelpad=15)
-        ax2.set_ylabel('Energy (TWh)', fontsize=28, fontweight='bold', labelpad=15)
+                     fontsize=26, fontweight='bold', pad=20)
+        ax2.set_xlabel('Month', fontsize=22, fontweight='bold', labelpad=15)
+        ax2.set_ylabel('Energy (TWh)', fontsize=22, fontweight='bold', labelpad=15)
         
         if source_name in total_sources:
             ax2.set_ylim(0, max_abs_totals)
         else:
             ax2.set_ylim(0, max_abs_individual)
             
-        ax2.tick_params(axis='both', labelsize=24)
+        ax2.tick_params(axis='both', labelsize=18)
         ax2.grid(True, alpha=0.3, linewidth=1.5)
 
         # Legend below - 5 columns, no frame
         ax2.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15),
-                  ncol=5, fontsize=22, frameon=False)
+                  ncol=5, fontsize=18, frameon=False)
 
         plt.tight_layout()
 
@@ -359,9 +359,9 @@ def main():
     print("=" * 60)
     print("\nFEATURES:")
     print("  ✓ TWO separate plots per source (percentage + absolute)")
-    print("  ✓ Much larger fonts (32px titles, 28px labels, 24px ticks)")
-    print("  ✓ Taller plots (12x10) for better mobile viewing")
-    print("  ✓ Legends below plots in 5 columns")
+    print("  ✓ Optimized fonts (26px titles, 22px labels, 18px ticks/legend)")
+    print("  ✓ Tall plots (12x10) for better mobile viewing")
+    print("  ✓ Legends below plots in 5 columns (no frame)")
     print("  ✓ Normalized y-axes for individual vs totals")
     print("=" * 60)
 
