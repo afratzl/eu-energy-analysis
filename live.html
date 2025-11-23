@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Intraday - EU Energy Analysis</title>
+    <title>Live Intraday Analysis - EU Energy Analysis</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -21,21 +21,22 @@
 
     <div class="container">
         <header class="page-header">
-            <h1>Live Intraday Analysis</h1>
-            <p class="subtitle">15-minute resolution | Today vs Yesterday vs Historical</p>
+            <h1>Live Intraday Energy Analysis</h1>
+            <p class="subtitle">Real-time 15-minute resolution data</p>
         </header>
 
         <div class="info-box">
-            <p><strong>Select an energy source below</strong> to view its live intraday production</p>
+            <p><strong>Select an energy source below</strong> to view today's production compared with historical patterns</p>
+            <p><strong>Updates:</strong> Hourly | <strong>Data:</strong> ENTSO-E Transparency Platform</p>
         </div>
 
         <!-- DROPDOWN SELECTOR -->
         <div class="chart-selector">
-            <label for="live-select">Choose Energy Source:</label>
-            <select id="live-select" onchange="showLiveChart(this.value)">
+            <label for="source-select">Choose Energy Source:</label>
+            <select id="source-select" onchange="showSource(this.value)">
                 <optgroup label="🌞 Renewable Sources">
-                    <option value="solar">Solar</option>
-                    <option value="wind" selected>Wind</option>
+                    <option value="solar" selected>Solar</option>
+                    <option value="wind">Wind</option>
                     <option value="hydro">Hydro</option>
                     <option value="biomass">Biomass</option>
                     <option value="geothermal">Geothermal</option>
@@ -54,22 +55,13 @@
             </select>
         </div>
 
-        <!-- DYNAMIC CHART DISPLAY -->
-        <div id="live-chart-display" class="chart-container">
-            <!-- Chart will be loaded here by JavaScript -->
+        <!-- DYNAMIC CHART DISPLAY - Stacked vertically -->
+        <div id="chart-display" class="chart-container">
+            <!-- Charts will be loaded here by JavaScript -->
         </div>
 
-        <div class="technical-note">
-            <h3>Technical Notes</h3>
-            <ul>
-                <li><strong>Updates:</strong> Every hour on GitHub Actions</li>
-                <li><strong>Resolution:</strong> 15-minute intervals with 2-hour data quality cutoff</li>
-                <li><strong>Projection System:</strong> Dashed lines show projected production including unreported countries</li>
-                <li><strong>Data Source:</strong> ENTSO-E Transparency Platform API</li>
-                <li><strong>Coverage:</strong> All EU member states (projection system handles unreported countries)</li>
-                <li><strong>Time Zone:</strong> All data displayed in Europe/Brussels (CET/CEST)</li>
-                <li><strong>Units:</strong> Gigawatts (GW) for improved readability</li>
-            </ul>
+        <div id="last-update" style="text-align: center; color: #666; margin-top: 20px; font-size: 14px;">
+            <!-- Last update timestamp will be loaded here -->
         </div>
     </div>
 
@@ -80,97 +72,75 @@
     </footer>
 
     <script>
-        // Live chart configurations
-        const liveCharts = {
-            'solar': {
-                image: 'plots/solar_analysis.png',
-                title: 'Solar Energy Production',
-                description: 'Peak production during midday hours, zero overnight'
-            },
-            'wind': {
-                image: 'plots/wind_analysis.png',
-                title: 'Wind Energy Production',
-                description: 'Variable throughout the day, affected by weather patterns'
-            },
-            'hydro': {
-                image: 'plots/hydro_analysis.png',
-                title: 'Hydro Energy Production',
-                description: 'Relatively stable, adjusts based on grid demand'
-            },
-            'biomass': {
-                image: 'plots/biomass_analysis.png',
-                title: 'Biomass Energy Production',
-                description: 'Dispatchable renewable, stable baseload contribution'
-            },
-            'geothermal': {
-                image: 'plots/geothermal_analysis.png',
-                title: 'Geothermal Energy Production',
-                description: 'Very stable baseload, limited geographical availability'
-            },
-            'gas': {
-                image: 'plots/gas_analysis.png',
-                title: 'Gas Energy Production',
-                description: 'Flexible backup, peaks during high demand periods'
-            },
-            'coal': {
-                image: 'plots/coal_analysis.png',
-                title: 'Coal Energy Production',
-                description: 'Declining usage, mainly for peak demand'
-            },
-            'nuclear': {
-                image: 'plots/nuclear_analysis.png',
-                title: 'Nuclear Energy Production',
-                description: 'Stable baseload power throughout the day'
-            },
-            'oil': {
-                image: 'plots/oil_analysis.png',
-                title: 'Oil Energy Production',
-                description: 'Rare, mainly emergency backup capacity'
-            },
-            'waste': {
-                image: 'plots/waste_analysis.png',
-                title: 'Waste Energy Production',
-                description: 'Steady generation from waste-to-energy facilities'
-            },
-            'all-renewables': {
-                image: 'plots/all_renewables_analysis.png',
-                title: 'Total Renewable Energy Production',
-                description: 'Combined renewables showing complementary generation patterns'
-            },
-            'all-non-renewables': {
-                image: 'plots/all_non_renewables_analysis.png',
-                title: 'Total Non-Renewable Energy Production',
-                description: 'Flexible generation filling gaps in renewable production'
-            }
+        // Energy source configurations
+        const sources = {
+            'solar': 'Solar',
+            'wind': 'Wind',
+            'hydro': 'Hydro',
+            'biomass': 'Biomass',
+            'geothermal': 'Geothermal',
+            'gas': 'Gas',
+            'coal': 'Coal',
+            'nuclear': 'Nuclear',
+            'oil': 'Oil',
+            'waste': 'Waste',
+            'all-renewables': 'All Renewables',
+            'all-non-renewables': 'All Non-Renewables'
         };
 
-        // Show live chart function
-        function showLiveChart(chartId) {
-            const chart = liveCharts[chartId];
-            const display = document.getElementById('live-chart-display');
-
-            // Update chart display with timestamp for cache busting
-            const timestamp = new Date().getTime();
+        // Show source function - displays both plots vertically
+        function showSource(sourceId) {
+            const sourceName = sources[sourceId];
+            const display = document.getElementById('chart-display');
+            
+            // Clean source ID for filename (replace hyphens with underscores)
+            const cleanId = sourceId.replace(/-/g, '_');
+            
+            // Update chart display with both plots stacked vertically
             display.innerHTML = `
-                <h2>${chart.title}</h2>
-                <img src="${chart.image}?t=${timestamp}" alt="${chart.title}" class="chart-img">
-                <p class="chart-caption">${chart.description}</p>
+                <h2>${sourceName} Energy Production</h2>
+                
+                <div style="margin-bottom: 40px;">
+                    <h3 style="text-align: center; margin-bottom: 20px;">Percentage of Total EU Production</h3>
+                    <img src="plots/${cleanId}_percentage.png" 
+                         alt="${sourceName} Percentage" 
+                         class="chart-img"
+                         onerror="this.src='plots/${cleanId}_analysis.png'; this.onerror=null;">
+                </div>
+                
+                <div style="margin-bottom: 40px;">
+                    <h3 style="text-align: center; margin-bottom: 20px;">Absolute Production (MW)</h3>
+                    <img src="plots/${cleanId}_absolute.png" 
+                         alt="${sourceName} Absolute Production" 
+                         class="chart-img"
+                         onerror="this.style.display='none';">
+                </div>
             `;
-
+            
             // Scroll to chart
             display.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
-        // Load default chart on page load
-        window.addEventListener('DOMContentLoaded', () => {
-            showLiveChart('wind');
-        });
+        // Load timestamp
+        function loadTimestamp() {
+            fetch('plots/last_update.html')
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('last-update').innerHTML = html;
+                })
+                .catch(error => {
+                    document.getElementById('last-update').innerHTML = '<p>Update time unavailable</p>';
+                });
+        }
 
-        // Auto-reload every 5 minutes to get fresh data
-        setInterval(() => {
-            const currentSelect = document.getElementById('live-select').value;
-            showLiveChart(currentSelect);
-        }, 5 * 60 * 1000);
+        // Load default source on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            showSource('solar');
+            loadTimestamp();
+            
+            // Reload timestamp every 5 minutes
+            setInterval(loadTimestamp, 300000);
+        });
     </script>
 </body>
 </html>
