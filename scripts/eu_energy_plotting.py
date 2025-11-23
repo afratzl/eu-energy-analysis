@@ -233,7 +233,7 @@ def create_all_charts(all_data):
                 if year in year_data:
                     monthly_data = year_data[year]
                     for month in range(1, 13):
-                        val = monthly_data.get(month, 0)
+                        val = monthly_data.get(month, 0) / 1000  # Convert to TWh
                         max_abs_value = max(max_abs_value, val)
 
                         if year in total_data:
@@ -274,7 +274,7 @@ def create_all_charts(all_data):
                 months_to_show = range(1, 13)
 
             months = [month_names[month - 1] for month in months_to_show]
-            values = [monthly_data.get(month, 0) for month in months_to_show]
+            values = [monthly_data.get(month, 0) / 1000 for month in months_to_show]  # Convert to TWh
 
             color = year_colors[i % len(year_colors)]
             ax1.plot(months, values, marker='o', color=color, linewidth=3, markersize=9, label=str(year))
@@ -293,9 +293,9 @@ def create_all_charts(all_data):
 
                 ax2.plot(months, percentages, marker='o', color=color, linewidth=3, markersize=9, label=str(year))
 
-        ax1.set_title(f'{source_name} Production (GWh)', fontsize=18, fontweight='bold')
+        ax1.set_title(f'{source_name} Production (TWh)', fontsize=18, fontweight='bold')
         ax1.set_xlabel('Month', fontsize=16)
-        ax1.set_ylabel('Energy (GWh)', fontsize=16)
+        ax1.set_ylabel('Energy (TWh)', fontsize=16)
         ax1.set_ylim(0, max_abs_value)
         ax1.tick_params(axis='both', labelsize=14)
         ax1.grid(True, linestyle='--', alpha=0.7)
@@ -351,7 +351,7 @@ def create_all_charts(all_data):
                 months_to_show = range(1, 13)
 
             months = [month_names[month - 1] for month in months_to_show]
-            values = [renewables_monthly.get(month, 0) for month in months_to_show]
+            values = [renewables_monthly.get(month, 0) / 1000 for month in months_to_show]  # Convert to TWh
 
             color = year_colors[i % len(year_colors)]
             ax1.plot(months, values, marker='o', color=color, linewidth=3, markersize=9, label=str(year))
@@ -368,9 +368,9 @@ def create_all_charts(all_data):
 
             ax2.plot(months, percentages, marker='o', color=color, linewidth=3, markersize=9, label=str(year))
 
-        ax1.set_title('Total Renewable Production (GWh)', fontsize=18, fontweight='bold')
+        ax1.set_title('Total Renewable Production (TWh)', fontsize=18, fontweight='bold')
         ax1.set_xlabel('Month', fontsize=16)
-        ax1.set_ylabel('Energy (GWh)', fontsize=16)
+        ax1.set_ylabel('Energy (TWh)', fontsize=16)
         ax1.set_ylim(bottom=0)
         ax1.tick_params(axis='both', labelsize=14)
         ax1.grid(True, linestyle='--', alpha=0.7)
@@ -434,7 +434,7 @@ def create_all_charts(all_data):
                         total_monthly = total_data[year]
 
                         for month in range(1, 13):
-                            source_val = source_monthly.get(month, 0)
+                            source_val = source_monthly.get(month, 0) / 1000  # Convert to TWh
                             total_val = total_monthly.get(month, 0)
 
                             max_abs_all_periods = max(max_abs_all_periods, source_val)
@@ -474,7 +474,7 @@ def create_all_charts(all_data):
                         total_monthly = total_data[year]
 
                         for month in range(1, 13):
-                            source_val = source_monthly.get(month, 0)
+                            source_val = source_monthly.get(month, 0) / 1000  # Convert to TWh
                             total_val = total_monthly.get(month, 0)
 
                             monthly_absolute[source_name][month].append(source_val)
@@ -512,9 +512,9 @@ def create_all_charts(all_data):
                 ax2.plot(months, monthly_means_pct[source_name], marker='o', color=color,
                          linewidth=3, markersize=9, label=source_name)
 
-            ax1.set_title('Production (GWh)', fontsize=18, fontweight='bold')
+            ax1.set_title('Production (TWh)', fontsize=18, fontweight='bold')
             ax1.set_xlabel('Month', fontsize=16)
-            ax1.set_ylabel('Energy (GWh)', fontsize=16)
+            ax1.set_ylabel('Energy (TWh)', fontsize=16)
             ax1.set_ylim(0, max_abs_all_periods)
             ax1.tick_params(axis='both', labelsize=14)
             ax1.grid(True, linestyle='--', alpha=0.7)
@@ -593,7 +593,7 @@ def create_all_charts(all_data):
                         category_monthly = category_data[year]
 
                         for month in range(1, 13):
-                            category_val = category_monthly.get(month, 0)
+                            category_val = category_monthly.get(month, 0) / 1000  # Convert to TWh
                             max_abs_renewable_periods = max(max_abs_renewable_periods, category_val)
 
         # Add 10% margin
@@ -626,7 +626,7 @@ def create_all_charts(all_data):
                         total_monthly = total_data[year]
 
                         for month in range(1, 13):
-                            category_val = category_monthly.get(month, 0)
+                            category_val = category_monthly.get(month, 0) / 1000  # Convert to TWh
                             total_val = total_monthly.get(month, 0)
 
                             monthly_absolute[category_name][month].append(category_val)
@@ -664,9 +664,9 @@ def create_all_charts(all_data):
                 ax2.plot(month_names_abbr, monthly_means_pct[category_name], marker='o', color=color,
                          linewidth=3, markersize=9, label=category_name)
 
-            ax1.set_title('Production (GWh)', fontsize=18, fontweight='bold')
+            ax1.set_title('Production (TWh)', fontsize=18, fontweight='bold')
             ax1.set_xlabel('Month', fontsize=16)
-            ax1.set_ylabel('Energy (GWh)', fontsize=16)
+            ax1.set_ylabel('Energy (TWh)', fontsize=16)
             ax1.set_ylim(0, max_abs_renewable_periods)
             ax1.tick_params(axis='both', labelsize=14)
             ax1.grid(True, linestyle='--', alpha=0.7)
