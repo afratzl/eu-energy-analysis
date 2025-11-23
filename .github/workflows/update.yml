@@ -35,25 +35,22 @@ jobs:
       run: |
         pip install pandas requests matplotlib numpy pytz entsoe-py scipy
         
-    - name: Run wind analysis
+    - name: Run intraday analysis for all sources
       env:
         ENTSOE_API_KEY: ${{ secrets.ENTSOE_API_KEY }}
       run: |
-        python scripts/wind_analysis.py
-        
-    # TODO: Uncomment when solar_analysis.py is ready
-    # - name: Run solar analysis
-    #   env:
-    #     ENTSOE_API_KEY: ${{ secrets.ENTSOE_API_KEY }}
-    #   run: |
-    #     python scripts/solar_analysis.py
-        
-    # TODO: Uncomment when renewable_analysis.py is ready
-    # - name: Run renewable analysis
-    #   env:
-    #     ENTSOE_API_KEY: ${{ secrets.ENTSOE_API_KEY }}
-    #   run: |
-    #     python scripts/renewable_analysis.py
+        python scripts/intraday_analysis.py --source solar
+        python scripts/intraday_analysis.py --source wind
+        python scripts/intraday_analysis.py --source hydro
+        python scripts/intraday_analysis.py --source biomass
+        python scripts/intraday_analysis.py --source geothermal
+        python scripts/intraday_analysis.py --source gas
+        python scripts/intraday_analysis.py --source coal
+        python scripts/intraday_analysis.py --source nuclear
+        python scripts/intraday_analysis.py --source oil
+        python scripts/intraday_analysis.py --source waste
+        python scripts/intraday_analysis.py --source all-renewables
+        python scripts/intraday_analysis.py --source all-non-renewables
         
     - name: Commit and push intraday plots
       run: |
