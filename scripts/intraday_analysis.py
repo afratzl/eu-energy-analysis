@@ -2,6 +2,7 @@
 """
 Unified Intraday Energy Analysis Script
 FIXED: Uses total_generation instead of load for percentage calculation
+UPDATED: Larger fonts and clearer titles for mobile
 """
 
 from entsoe import EntsoePandasClient
@@ -528,6 +529,7 @@ def create_time_axis():
 def plot_analysis(stats_data, source_type, output_file):
     """
     Create vertical plots - percentage on top, absolute below
+    UPDATED: Larger fonts and thicker lines for mobile viewing
     """
     if not stats_data:
         print("No data for plotting")
@@ -571,11 +573,11 @@ def plot_analysis(stats_data, source_type, output_file):
     time_labels = create_time_axis()
     source_name = DISPLAY_NAMES[source_type]
     
-    # PLOT 1 (TOP): PERCENTAGE
-    ax1.set_title(f'{source_name} as Percentage of Total EU Generation',
-                  fontsize=26, fontweight='bold', pad=20)
-    ax1.set_xlabel('Time of Day (Brussels)', fontsize=22, fontweight='bold', labelpad=15)
-    ax1.set_ylabel('Percentage (%)', fontsize=22, fontweight='bold', labelpad=15)
+    # PLOT 1 (TOP): PERCENTAGE - UPDATED TITLE
+    ax1.set_title(f'{source_name}\n% of Total Generation',
+                  fontsize=34, fontweight='bold', pad=20)
+    ax1.set_xlabel('Time of Day (Brussels)', fontsize=28, fontweight='bold', labelpad=15)
+    ax1.set_ylabel('Percentage (%)', fontsize=28, fontweight='bold', labelpad=15)
 
     max_percentage = 0
 
@@ -607,7 +609,8 @@ def plot_analysis(stats_data, source_type, output_file):
             else:
                 continue
 
-        ax1.plot(x_values, y_values, color=color, linestyle=linestyle, linewidth=4.5, label=label)
+        # THICKER LINES
+        ax1.plot(x_values, y_values, color=color, linestyle=linestyle, linewidth=6, label=label)
 
         if period_name in ['week_ago', 'year_ago', 'two_years_ago'] and 'percentage_std' in data:
             std_values = data['percentage_std']
@@ -621,7 +624,7 @@ def plot_analysis(stats_data, source_type, output_file):
             ax1.fill_between(x_values, lower_bound, upper_bound, color=color, alpha=0.2)
 
     ax1.grid(True, alpha=0.3, linewidth=1.5)
-    ax1.tick_params(axis='both', labelsize=18)
+    ax1.tick_params(axis='both', labelsize=22)
     ax1.set_xlim(0, len(time_labels))
 
     if max_percentage > 0:
@@ -629,11 +632,11 @@ def plot_analysis(stats_data, source_type, output_file):
     else:
         ax1.set_ylim(0, 50)
 
-    # PLOT 2 (BOTTOM): ABSOLUTE VALUES
-    ax2.set_title(f'EU {source_name} Energy Production',
-                  fontsize=26, fontweight='bold', pad=20)
-    ax2.set_xlabel('Time of Day (Brussels)', fontsize=22, fontweight='bold', labelpad=15)
-    ax2.set_ylabel('Energy Production (MW)', fontsize=22, fontweight='bold', labelpad=15)
+    # PLOT 2 (BOTTOM): ABSOLUTE VALUES - UPDATED TITLE
+    ax2.set_title(f'{source_name}\nProduction (MW)',
+                  fontsize=34, fontweight='bold', pad=20)
+    ax2.set_xlabel('Time of Day (Brussels)', fontsize=28, fontweight='bold', labelpad=15)
+    ax2.set_ylabel('Energy Production (MW)', fontsize=28, fontweight='bold', labelpad=15)
 
     max_energy = 0
 
@@ -662,7 +665,8 @@ def plot_analysis(stats_data, source_type, output_file):
             else:
                 continue
 
-        ax2.plot(x_values, y_values, color=color, linestyle=linestyle, linewidth=4.5, label=label)
+        # THICKER LINES
+        ax2.plot(x_values, y_values, color=color, linestyle=linestyle, linewidth=6, label=label)
 
         if period_name in ['week_ago', 'year_ago', 'two_years_ago'] and 'energy_std' in data:
             std_values = data['energy_std']
@@ -676,7 +680,7 @@ def plot_analysis(stats_data, source_type, output_file):
             ax2.fill_between(x_values, lower_bound, upper_bound, color=color, alpha=0.2)
 
     ax2.grid(True, alpha=0.3, linewidth=1.5)
-    ax2.tick_params(axis='both', labelsize=18)
+    ax2.tick_params(axis='both', labelsize=22)
     ax2.set_xlim(0, len(time_labels))
     ax2.set_ylim(0, max_energy * 1.05)
 
@@ -686,10 +690,10 @@ def plot_analysis(stats_data, source_type, output_file):
         ax.set_xticks(tick_positions)
         ax.set_xticklabels([time_labels[i] for i in tick_positions], rotation=45)
 
-    # Legend below plots
+    # Legend below plots - LARGER FONT
     handles1, labels1 = ax1.get_legend_handles_labels()
     fig.legend(handles1, labels1, loc='lower center', bbox_to_anchor=(0.5, -0.02),
-               ncol=3, fontsize=18, frameon=False, columnspacing=1.5)
+               ncol=3, fontsize=20, frameon=False, columnspacing=1.5)
 
     plt.tight_layout(rect=[0, 0.02, 1, 0.985])
 
