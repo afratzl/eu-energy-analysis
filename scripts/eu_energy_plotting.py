@@ -948,7 +948,6 @@ def create_all_charts(all_data):
 
             fig.suptitle('Year-over-Year Change vs 2015',
                          fontsize=34, fontweight='bold', x=0.5, y=0.995, ha="center")
-                         fontsize=30, fontweight='bold', x=0.5, y=0.995, ha="center")
 
             plt.tight_layout(rect=[0, 0.02, 1, 0.985])
 
