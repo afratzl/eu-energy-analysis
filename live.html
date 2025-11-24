@@ -1,146 +1,173 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Intraday Analysis - EU Energy Analysis</title>
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-    <nav class="navbar">
-        <div class="nav-container">
-            <span class="nav-title">EU Energy Analysis</span>
-            <div class="nav-links">
-                <a href="index.html">Home</a>
-                <a href="live.html" class="active">Live</a>
-                <a href="monthly.html">Monthly</a>
-                <a href="trends.html">Trends</a>
-            </div>
-        </div>
-    </nav>
+def plot_analysis(stats_data, source_type, output_file):
+    """
+    Create vertical plots - percentage on top, absolute below
+    """
+    if not stats_data:
+        print("No data for plotting")
+        return None
 
-    <div class="container">
-        <header class="page-header">
-            <h1>Live Intraday Energy Analysis</h1>
-            <p class="subtitle">Real-time 15-minute resolution data</p>
-        </header>
+    print("\nCreating plots...")
 
-        <div class="info-box">
-            <p><strong>Select an energy source below</strong> to view today's production compared with historical patterns</p>
-            <p><strong>Updates:</strong> Hourly | <strong>Data:</strong> ENTSO-E Transparency Platform</p>
-        </div>
+    # VERTICAL LAYOUT: 2 rows, 1 column
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 20))
 
-        <!-- DROPDOWN SELECTOR -->
-        <div class="chart-selector">
-            <label for="source-select">Choose Energy Source:</label>
-            <select id="source-select" onchange="showSource(this.value)">
-                <optgroup label="🌞 Renewable Sources">
-                    <option value="solar" selected>Solar</option>
-                    <option value="wind">Wind</option>
-                    <option value="hydro">Hydro</option>
-                    <option value="biomass">Biomass</option>
-                    <option value="geothermal">Geothermal</option>
-                </optgroup>
-                <optgroup label="⚡ Non-Renewable Sources">
-                    <option value="gas">Gas</option>
-                    <option value="coal">Coal</option>
-                    <option value="nuclear">Nuclear</option>
-                    <option value="oil">Oil</option>
-                    <option value="waste">Waste</option>
-                </optgroup>
-                <optgroup label="📊 Totals">
-                    <option value="all-renewables">All Renewables</option>
-                    <option value="all-non-renewables">All Non-Renewables</option>
-                </optgroup>
-            </select>
-        </div>
+    colors = {
+        'today': '#FF4444',
+        'yesterday': '#FF8800',
+        'week_ago': '#4444FF',
+        'year_ago': '#44AA44',
+        'two_years_ago': '#AA44AA',
+        'today_projected': '#FF4444',
+        'yesterday_projected': '#FF8800'
+    }
 
-        <!-- DYNAMIC CHART DISPLAY - Stacked vertically -->
-        <div id="chart-display" class="chart-container">
-            <!-- Charts will be loaded here by JavaScript -->
-        </div>
+    linestyles = {
+        'today': '-',
+        'yesterday': '-',
+        'week_ago': '-',
+        'year_ago': '-',
+        'two_years_ago': '-',
+        'today_projected': '--',
+        'yesterday_projected': '--'
+    }
 
-        <div id="last-update" style="text-align: center; color: #666; margin-top: 20px; font-size: 14px;">
-            <!-- Last update timestamp will be loaded here -->
-        </div>
-    </div>
+    labels = {
+        'today': 'Today',
+        'yesterday': 'Yesterday',
+        'week_ago': 'Previous Week (avg ± std)',
+        'year_ago': 'Same Period Last Year (avg ± std)',
+        'two_years_ago': 'Same Period 2 Years Ago (avg ± std)',
+        'today_projected': 'Today (Projected)',
+        'yesterday_projected': 'Yesterday (Projected)'
+    }
 
-    <footer>
-        <p>Built with data from <a href="https://transparency.entsoe.eu/" target="_blank">ENTSO-E</a> | 
-           Source code on <a href="https://github.com/afratzl/eu-energy-analysis" target="_blank">GitHub</a> | 
-           Built by <a href="https://www.linkedin.com/in/alexfratzl/" target="_blank">Alex Fratzl</a> with Claude Sonnet</p>
-    </footer>
+    time_labels = create_time_axis()
+    source_name = DISPLAY_NAMES[source_type]
+    
+    # PLOT 1 (TOP): PERCENTAGE
+    ax1.set_title(f'{source_name} as Percentage of Total EU Generation',
+                  fontsize=26, fontweight='bold', pad=20)
+    ax1.set_xlabel('Time of Day (Brussels)', fontsize=22, fontweight='bold', labelpad=15)
+    ax1.set_ylabel('Percentage (%)', fontsize=22, fontweight='bold', labelpad=15)
 
-    <script>
-        // Energy source configurations
-        const sources = {
-            'solar': 'Solar',
-            'wind': 'Wind',
-            'hydro': 'Hydro',
-            'biomass': 'Biomass',
-            'geothermal': 'Geothermal',
-            'gas': 'Gas',
-            'coal': 'Coal',
-            'nuclear': 'Nuclear',
-            'oil': 'Oil',
-            'waste': 'Waste',
-            'all-renewables': 'All Renewables',
-            'all-non-renewables': 'All Non-Renewables'
-        };
+    max_percentage = 0
 
-        // Show source function - displays both plots vertically
-        function showSource(sourceId) {
-            const sourceName = sources[sourceId];
-            const display = document.getElementById('chart-display');
+    plot_order = ['week_ago', 'year_ago', 'two_years_ago', 'yesterday', 'today', 
+                  'yesterday_projected', 'today_projected']
+
+    for period_name in plot_order:
+        if period_name not in stats_data:
+            continue
             
-            // Clean source ID for filename (replace hyphens with underscores)
-            const cleanId = sourceId.replace(/-/g, '_');
-            
-            // Update chart display with both plots stacked vertically
-            display.innerHTML = `
-                <h2>${sourceName} Energy Production</h2>
-                
-                <div style="margin-bottom: 40px;">
-                    <h3 style="text-align: center; margin-bottom: 20px;">Percentage of Total EU Production</h3>
-                    <img src="plots/${cleanId}_percentage.png" 
-                         alt="${sourceName} Percentage" 
-                         class="chart-img"
-                         onerror="this.src='plots/${cleanId}_analysis.png'; this.onerror=null;">
-                </div>
-                
-                <div style="margin-bottom: 40px;">
-                    <h3 style="text-align: center; margin-bottom: 20px;">Absolute Production (MW)</h3>
-                    <img src="plots/${cleanId}_absolute.png" 
-                         alt="${sourceName} Absolute Production" 
-                         class="chart-img"
-                         onerror="this.style.display='none';">
-                </div>
-            `;
-            
-            // Scroll to chart
-            display.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
+        data = stats_data[period_name]
+        if 'percentage_mean' not in data or len(data['percentage_mean']) == 0:
+            continue
 
-        // Load timestamp
-        function loadTimestamp() {
-            fetch('plots/last_update.html')
-                .then(response => response.text())
-                .then(html => {
-                    document.getElementById('last-update').innerHTML = html;
-                })
-                .catch(error => {
-                    document.getElementById('last-update').innerHTML = '<p>Update time unavailable</p>';
-                });
-        }
+        color = colors.get(period_name, 'gray')
+        linestyle = linestyles.get(period_name, '-')
+        label = labels.get(period_name, period_name)
 
-        // Load default source on page load
-        window.addEventListener('DOMContentLoaded', () => {
-            showSource('solar');
-            loadTimestamp();
+        x_values = np.arange(len(data['percentage_mean']))
+        y_values = data['percentage_mean'].copy()
+
+        max_percentage = max(max_percentage, np.nanmax(y_values))
+
+        if period_name in ['today', 'today_projected']:
+            mask = ~np.isnan(y_values)
+            if np.any(mask):
+                x_values = x_values[mask]
+                y_values = y_values[mask]
+            else:
+                continue
+
+        ax1.plot(x_values, y_values, color=color, linestyle=linestyle, linewidth=4.5, label=label)
+
+        if period_name in ['week_ago', 'year_ago', 'two_years_ago'] and 'percentage_std' in data:
+            std_values = data['percentage_std']
+            if period_name == 'today':
+                std_values = std_values[mask] if np.any(mask) else std_values
+
+            upper_bound = y_values + std_values[:len(x_values)]
+            lower_bound = y_values - std_values[:len(x_values)]
+            max_percentage = max(max_percentage, np.nanmax(upper_bound))
+
+            ax1.fill_between(x_values, lower_bound, upper_bound, color=color, alpha=0.2)
+
+    ax1.grid(True, alpha=0.3, linewidth=1.5)
+    ax1.tick_params(axis='both', labelsize=18)
+    ax1.set_xlim(0, len(time_labels))
+
+    if max_percentage > 0:
+        ax1.set_ylim(0, max_percentage * 1.05)
+    else:
+        ax1.set_ylim(0, 50)
+
+    # PLOT 2 (BOTTOM): ABSOLUTE VALUES
+    ax2.set_title(f'EU {source_name} Energy Production',
+                  fontsize=26, fontweight='bold', pad=20)
+    ax2.set_xlabel('Time of Day (Brussels)', fontsize=22, fontweight='bold', labelpad=15)
+    ax2.set_ylabel('Energy Production (MW)', fontsize=22, fontweight='bold', labelpad=15)
+
+    max_energy = 0
+
+    for period_name in plot_order:
+        if period_name not in stats_data:
+            continue
             
-            // Reload timestamp every 5 minutes
-            setInterval(loadTimestamp, 300000);
-        });
-    </script>
-</body>
-</html>
+        data = stats_data[period_name]
+        if 'energy_mean' not in data or len(data['energy_mean']) == 0:
+            continue
+
+        color = colors.get(period_name, 'gray')
+        linestyle = linestyles.get(period_name, '-')
+        label = labels.get(period_name, period_name)
+
+        x_values = np.arange(len(data['energy_mean']))
+        y_values = data['energy_mean'].copy()
+
+        max_energy = max(max_energy, np.nanmax(y_values))
+
+        if period_name in ['today', 'today_projected']:
+            mask = ~np.isnan(y_values)
+            if np.any(mask):
+                x_values = x_values[mask]
+                y_values = y_values[mask]
+            else:
+                continue
+
+        ax2.plot(x_values, y_values, color=color, linestyle=linestyle, linewidth=4.5, label=label)
+
+        if period_name in ['week_ago', 'year_ago', 'two_years_ago'] and 'energy_std' in data:
+            std_values = data['energy_std']
+            if period_name == 'today':
+                std_values = std_values[mask] if np.any(mask) else std_values
+
+            upper_bound = y_values + std_values[:len(x_values)]
+            lower_bound = y_values - std_values[:len(x_values)]
+            max_energy = max(max_energy, np.nanmax(upper_bound))
+
+            ax2.fill_between(x_values, lower_bound, upper_bound, color=color, alpha=0.2)
+
+    ax2.grid(True, alpha=0.3, linewidth=1.5)
+    ax2.tick_params(axis='both', labelsize=18)
+    ax2.set_xlim(0, len(time_labels))
+    ax2.set_ylim(0, max_energy * 1.05)
+
+    # X-axis ticks for both plots
+    tick_positions = np.arange(0, len(time_labels), 8)
+    for ax in [ax1, ax2]:
+        ax.set_xticks(tick_positions)
+        ax.set_xticklabels([time_labels[i] for i in tick_positions], rotation=45)
+
+    # Legend below plots
+    handles1, labels1 = ax1.get_legend_handles_labels()
+    fig.legend(handles1, labels1, loc='lower center', bbox_to_anchor=(0.5, -0.02),
+               ncol=3, fontsize=18, frameon=False, columnspacing=1.5)
+
+    plt.tight_layout(rect=[0, 0.02, 1, 0.985])
+
+    plt.savefig(output_file, dpi=150, bbox_inches='tight')
+    print(f"Saved plot to {output_file}")
+    plt.close()
+
+    return output_file
