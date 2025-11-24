@@ -105,6 +105,7 @@ def load_data_from_google_sheets():
 def create_all_charts(all_data):
     """
     Create all charts from the loaded data - MOBILE OPTIMIZED
+    UPDATED: Larger fonts, thicker lines, clearer titles, no Y-axis restrictions
     """
     if not all_data:
         print("No data available for plotting")
@@ -170,59 +171,7 @@ def create_all_charts(all_data):
     
     sources_to_plot = individual_sources + total_sources
 
-    # Calculate max values
-    max_abs_individual = 0
-    max_pct_individual = 0
-    max_abs_totals = 0
-    max_pct_totals = 0
-
-    for source_name in individual_sources:
-        if source_name in all_data and 'Total Generation' in all_data:
-            year_data = all_data[source_name]['year_data']
-            total_data = all_data['Total Generation']['year_data']
-
-            for year in years_available:
-                if year in year_data:
-                    monthly_data = year_data[year]
-                    for month in range(1, 13):
-                        val = monthly_data.get(month, 0)
-                        max_abs_individual = max(max_abs_individual, val / 1000)
-
-                        if year in total_data:
-                            total_val = total_data[year].get(month, 0)
-                            if total_val > 0:
-                                pct = (val / total_val) * 100
-                                max_pct_individual = max(max_pct_individual, pct)
-
-    for source_name in total_sources:
-        if source_name in all_data and 'Total Generation' in all_data:
-            year_data = all_data[source_name]['year_data']
-            total_data = all_data['Total Generation']['year_data']
-
-            for year in years_available:
-                if year in year_data:
-                    monthly_data = year_data[year]
-                    for month in range(1, 13):
-                        val = monthly_data.get(month, 0)
-                        max_abs_totals = max(max_abs_totals, val / 1000)
-
-                        if year in total_data:
-                            total_val = total_data[year].get(month, 0)
-                            if total_val > 0:
-                                pct = (val / total_val) * 100
-                                max_pct_totals = max(max_pct_totals, pct)
-
-    # Set limits with margin
-    max_abs_individual = max(100, max_abs_individual * 1.1)
-    max_pct_individual = max(35, max_pct_individual * 1.1)
-    max_abs_totals = max_abs_totals * 1.1
-    max_pct_totals = max_pct_totals * 1.1
-    
-    print(f"\nY-axis limits:")
-    print(f"  Individual: {max_abs_individual:.1f} TWh, {max_pct_individual:.1f}%")
-    print(f"  Totals: {max_abs_totals:.1f} TWh, {max_pct_totals:.1f}%")
-
-    # Create plots for each source
+    # Create plots for each source - NO Y-AXIS RESTRICTIONS for individual sources
     print("\n" + "=" * 60)
     print("CREATING INDIVIDUAL SOURCE PLOTS")
     print("=" * 60)
@@ -237,9 +186,11 @@ def create_all_charts(all_data):
         year_data = all_data[source_name]['year_data']
         total_data = all_data['Total Generation']['year_data']
 
-        # PLOT 1: Percentage (WITH TITLE)
+        # PLOT 1: Percentage
         fig1, ax1 = plt.subplots(figsize=(12, 10))
 
+        max_pct_value = 0
+        
         for i, year in enumerate(years_available):
             if year not in year_data:
                 continue
@@ -263,29 +214,30 @@ def create_all_charts(all_data):
                     source_val = values_gwh[months_to_show.index(month)]
                     total_val = total_monthly.get(month, 0)
                     if total_val > 0:
-                        percentages.append((source_val / total_val) * 100)
+                        pct = (source_val / total_val) * 100
+                        percentages.append(pct)
+                        max_pct_value = max(max_pct_value, pct)
                     else:
                         percentages.append(0)
 
                 color = year_colors[i % len(year_colors)]
                 ax1.plot(months, percentages, marker='o', color=color, 
-                        linewidth=4.5, markersize=9, label=str(year))
+                        linewidth=6, markersize=11, label=str(year))
 
-        ax1.set_title(f'{source_name} % of Total Generation', 
-                     fontsize=26, fontweight='bold', pad=20)
-        ax1.set_xlabel('Month', fontsize=22, fontweight='bold', labelpad=15)
-        ax1.set_ylabel('Percentage (%)', fontsize=22, fontweight='bold', labelpad=15)
+        # UPDATED TITLE - clearer and more direct
+        ax1.set_title(f'{source_name}\n% of Total Generation', 
+                     fontsize=34, fontweight='bold', pad=20)
+        ax1.set_xlabel('Month', fontsize=28, fontweight='bold', labelpad=15)
+        ax1.set_ylabel('Percentage (%)', fontsize=28, fontweight='bold', labelpad=15)
         
-        if source_name in total_sources:
-            ax1.set_ylim(0, max_pct_totals)
-        else:
-            ax1.set_ylim(0, max_pct_individual)
+        # NO RESTRICTION - let it scale to data
+        ax1.set_ylim(0, max_pct_value * 1.1 if max_pct_value > 0 else 10)
             
-        ax1.tick_params(axis='both', labelsize=18)
+        ax1.tick_params(axis='both', labelsize=22)
         ax1.grid(True, alpha=0.3, linewidth=1.5)
 
         ax1.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), 
-                  ncol=5, fontsize=18, frameon=False)
+                  ncol=5, fontsize=20, frameon=False)
 
         plt.tight_layout()
 
@@ -294,9 +246,11 @@ def create_all_charts(all_data):
         print(f"  ✓ Saved: {percentage_filename}")
         plt.close()
 
-        # PLOT 2: Absolute (WITH TITLE)
+        # PLOT 2: Absolute
         fig2, ax2 = plt.subplots(figsize=(12, 10))
 
+        max_abs_value = 0
+        
         for i, year in enumerate(years_available):
             if year not in year_data:
                 continue
@@ -313,26 +267,27 @@ def create_all_charts(all_data):
             months = [month_names[month - 1] for month in months_to_show]
             values_gwh = [monthly_data.get(month, 0) for month in months_to_show]
             values_twh = [val / 1000 for val in values_gwh]
+            
+            max_abs_value = max(max_abs_value, max(values_twh) if values_twh else 0)
 
             color = year_colors[i % len(year_colors)]
             ax2.plot(months, values_twh, marker='o', color=color,
-                    linewidth=4.5, markersize=9, label=str(year))
+                    linewidth=6, markersize=11, label=str(year))
 
-        ax2.set_title(f'{source_name} Production (TWh)', 
-                     fontsize=26, fontweight='bold', pad=20)
-        ax2.set_xlabel('Month', fontsize=22, fontweight='bold', labelpad=15)
-        ax2.set_ylabel('Energy (TWh)', fontsize=22, fontweight='bold', labelpad=15)
+        # UPDATED TITLE
+        ax2.set_title(f'{source_name}\nProduction (TWh)', 
+                     fontsize=34, fontweight='bold', pad=20)
+        ax2.set_xlabel('Month', fontsize=28, fontweight='bold', labelpad=15)
+        ax2.set_ylabel('Energy (TWh)', fontsize=28, fontweight='bold', labelpad=15)
         
-        if source_name in total_sources:
-            ax2.set_ylim(0, max_abs_totals)
-        else:
-            ax2.set_ylim(0, max_abs_individual)
+        # NO RESTRICTION - let it scale to data
+        ax2.set_ylim(0, max_abs_value * 1.1 if max_abs_value > 0 else 10)
             
-        ax2.tick_params(axis='both', labelsize=18)
+        ax2.tick_params(axis='both', labelsize=22)
         ax2.grid(True, alpha=0.3, linewidth=1.5)
 
         ax2.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15),
-                  ncol=5, fontsize=18, frameon=False)
+                  ncol=5, fontsize=20, frameon=False)
 
         plt.tight_layout()
 
@@ -449,33 +404,33 @@ def create_all_charts(all_data):
 
                 # ax1 = PERCENTAGE (top)
                 ax1.plot(months, monthly_means_pct[source_name], marker='o', color=color,
-                         linewidth=4.5, markersize=9, label=source_name)
+                         linewidth=6, markersize=11, label=source_name)
                 
                 # ax2 = ABSOLUTE (bottom)
                 values_twh = [val / 1000 for val in monthly_means_abs[source_name]]
                 ax2.plot(months, values_twh, marker='o', color=color,
-                         linewidth=4.5, markersize=9, label=source_name)
+                         linewidth=6, markersize=11, label=source_name)
 
-            ax1.set_title('% of Total Generation', fontsize=22, fontweight='bold')
-            ax1.set_xlabel('Month', fontsize=18)
-            ax1.set_ylabel('Percentage (%)', fontsize=18)
+            ax1.set_title('% of Total Generation', fontsize=28, fontweight='bold')
+            ax1.set_xlabel('Month', fontsize=24)
+            ax1.set_ylabel('Percentage (%)', fontsize=24)
             ax1.set_ylim(0, max_pct_all_periods)
-            ax1.tick_params(axis='both', labelsize=16)
+            ax1.tick_params(axis='both', labelsize=20)
             ax1.grid(True, linestyle='--', alpha=0.7)
 
-            ax2.set_title('Production (TWh)', fontsize=22, fontweight='bold')
-            ax2.set_xlabel('Month', fontsize=18)
-            ax2.set_ylabel('Energy (TWh)', fontsize=18)
+            ax2.set_title('Production (TWh)', fontsize=28, fontweight='bold')
+            ax2.set_xlabel('Month', fontsize=24)
+            ax2.set_ylabel('Energy (TWh)', fontsize=24)
             ax2.set_ylim(0, max_abs_all_periods)
-            ax2.tick_params(axis='both', labelsize=16)
+            ax2.tick_params(axis='both', labelsize=20)
             ax2.grid(True, linestyle='--', alpha=0.7)
 
             handles, labels = ax1.get_legend_handles_labels()
             fig.legend(handles, labels, loc='lower center', bbox_to_anchor=(0.5, -0.02), ncol=5,
-                       fontsize=14, frameon=False)
+                       fontsize=18, frameon=False)
 
-            fig.suptitle(f'Monthly Mean Energy Sources: {period["name"]}',
-                         fontsize=24, fontweight='bold', y=0.995)
+            fig.suptitle(f'All Energy Sources: {period["name"]}',
+                         fontsize=30, fontweight='bold', y=0.995)
 
             plt.tight_layout(rect=[0, 0.02, 1, 0.985])
 
@@ -573,33 +528,33 @@ def create_all_charts(all_data):
 
                 # ax1 = PERCENTAGE (top)
                 ax1.plot(month_names_abbr, monthly_means_pct[category_name], marker='o', color=color,
-                         linewidth=4.5, markersize=9, label=category_name)
+                         linewidth=6, markersize=11, label=category_name)
                 
                 # ax2 = ABSOLUTE (bottom)
                 values_twh = [val / 1000 for val in monthly_means_abs[category_name]]
                 ax2.plot(month_names_abbr, values_twh, marker='o', color=color,
-                         linewidth=4.5, markersize=9, label=category_name)
+                         linewidth=6, markersize=11, label=category_name)
 
-            ax1.set_title('% of Total Generation', fontsize=22, fontweight='bold')
-            ax1.set_xlabel('Month', fontsize=18)
-            ax1.set_ylabel('Percentage (%)', fontsize=18)
+            ax1.set_title('% of Total Generation', fontsize=28, fontweight='bold')
+            ax1.set_xlabel('Month', fontsize=24)
+            ax1.set_ylabel('Percentage (%)', fontsize=24)
             ax1.set_ylim(0, 100)
-            ax1.tick_params(axis='both', labelsize=16)
+            ax1.tick_params(axis='both', labelsize=20)
             ax1.grid(True, linestyle='--', alpha=0.7)
 
-            ax2.set_title('Production (TWh)', fontsize=22, fontweight='bold')
-            ax2.set_xlabel('Month', fontsize=18)
-            ax2.set_ylabel('Energy (TWh)', fontsize=18)
+            ax2.set_title('Production (TWh)', fontsize=28, fontweight='bold')
+            ax2.set_xlabel('Month', fontsize=24)
+            ax2.set_ylabel('Energy (TWh)', fontsize=24)
             ax2.set_ylim(0, max_abs_renewable_periods)
-            ax2.tick_params(axis='both', labelsize=16)
+            ax2.tick_params(axis='both', labelsize=20)
             ax2.grid(True, linestyle='--', alpha=0.7)
 
             handles, labels = ax1.get_legend_handles_labels()
             fig.legend(handles, labels, loc='lower center', bbox_to_anchor=(0.5, -0.02), ncol=2,
-                       fontsize=16, frameon=False)
+                       fontsize=22, frameon=False)
 
-            fig.suptitle(f'Monthly Mean Renewable vs Non-Renewable: {period["name"]}',
-                         fontsize=24, fontweight='bold', y=0.995)
+            fig.suptitle(f'Renewables vs Non-Renewables: {period["name"]}',
+                         fontsize=30, fontweight='bold', y=0.995)
 
             plt.tight_layout(rect=[0, 0.02, 1, 0.985])
 
@@ -695,36 +650,36 @@ def create_all_charts(all_data):
                             percentages.append(0)
 
                     ax1.plot(pct_years, percentages, marker='o', color=color,
-                             linewidth=4.5, markersize=9, label=source_name)
+                             linewidth=6, markersize=11, label=source_name)
                 
                 # ax2 = ABSOLUTE (bottom)
                 values_twh = [annual_totals[source_name][year] / 1000 for year in years_list]
                 ax2.plot(years_list, values_twh, marker='o', color=color,
-                         linewidth=4.5, markersize=9, label=source_name)
+                         linewidth=6, markersize=11, label=source_name)
 
                 lines_plotted += 1
 
         if lines_plotted > 0:
-            ax1.set_title('% of Total Generation', fontsize=22, fontweight='bold')
-            ax1.set_xlabel('Year', fontsize=18)
-            ax1.set_ylabel('Percentage (%)', fontsize=18)
+            ax1.set_title('% of Total Generation', fontsize=28, fontweight='bold')
+            ax1.set_xlabel('Year', fontsize=24)
+            ax1.set_ylabel('Percentage (%)', fontsize=24)
             ax1.set_ylim(0, max_annual_pct)
-            ax1.tick_params(axis='both', labelsize=16)
+            ax1.tick_params(axis='both', labelsize=20)
             ax1.grid(True, linestyle='--', alpha=0.7)
 
-            ax2.set_title('Production (TWh)', fontsize=22, fontweight='bold')
-            ax2.set_xlabel('Year', fontsize=18)
-            ax2.set_ylabel('Energy Production (TWh)', fontsize=18)
+            ax2.set_title('Production (TWh)', fontsize=28, fontweight='bold')
+            ax2.set_xlabel('Year', fontsize=24)
+            ax2.set_ylabel('Energy Production (TWh)', fontsize=24)
             ax2.set_ylim(0, max_annual_twh)
-            ax2.tick_params(axis='both', labelsize=16)
+            ax2.tick_params(axis='both', labelsize=20)
             ax2.grid(True, linestyle='--', alpha=0.7)
 
             handles, labels = ax1.get_legend_handles_labels()
             fig.legend(handles, labels, loc='lower center', bbox_to_anchor=(0.5, -0.02), ncol=len(available_renewables),
-                       fontsize=14, frameon=False)
+                       fontsize=18, frameon=False)
 
-            fig.suptitle('Annual EU Renewable Energy Production Trends',
-                         fontsize=24, fontweight='bold', y=0.995)
+            fig.suptitle('Annual Renewable Trends',
+                         fontsize=30, fontweight='bold', y=0.995)
 
             plt.tight_layout(rect=[0, 0.02, 1, 0.985])
 
@@ -764,36 +719,36 @@ def create_all_charts(all_data):
                             percentages.append(0)
 
                     ax1.plot(pct_years, percentages, marker='o', color=color,
-                             linewidth=4.5, markersize=9, label=source_name)
+                             linewidth=6, markersize=11, label=source_name)
                 
                 # ax2 = ABSOLUTE (bottom)
                 values_twh = [annual_totals[source_name][year] / 1000 for year in years_list]
                 ax2.plot(years_list, values_twh, marker='o', color=color,
-                         linewidth=4.5, markersize=9, label=source_name)
+                         linewidth=6, markersize=11, label=source_name)
 
                 lines_plotted += 1
 
         if lines_plotted > 0:
-            ax1.set_title('% of Total Generation', fontsize=22, fontweight='bold')
-            ax1.set_xlabel('Year', fontsize=18)
-            ax1.set_ylabel('Percentage (%)', fontsize=18)
+            ax1.set_title('% of Total Generation', fontsize=28, fontweight='bold')
+            ax1.set_xlabel('Year', fontsize=24)
+            ax1.set_ylabel('Percentage (%)', fontsize=24)
             ax1.set_ylim(0, max_annual_pct)
-            ax1.tick_params(axis='both', labelsize=16)
+            ax1.tick_params(axis='both', labelsize=20)
             ax1.grid(True, linestyle='--', alpha=0.7)
 
-            ax2.set_title('Production (TWh)', fontsize=22, fontweight='bold')
-            ax2.set_xlabel('Year', fontsize=18)
-            ax2.set_ylabel('Energy Production (TWh)', fontsize=18)
+            ax2.set_title('Production (TWh)', fontsize=28, fontweight='bold')
+            ax2.set_xlabel('Year', fontsize=24)
+            ax2.set_ylabel('Energy Production (TWh)', fontsize=24)
             ax2.set_ylim(0, max_annual_twh)
-            ax2.tick_params(axis='both', labelsize=16)
+            ax2.tick_params(axis='both', labelsize=20)
             ax2.grid(True, linestyle='--', alpha=0.7)
 
             handles, labels = ax1.get_legend_handles_labels()
             fig.legend(handles, labels, loc='lower center', bbox_to_anchor=(0.5, -0.02),
-                       ncol=len(available_non_renewables), fontsize=14, frameon=False)
+                       ncol=len(available_non_renewables), fontsize=18, frameon=False)
 
-            fig.suptitle('Annual EU Non-Renewable Energy Production Trends',
-                         fontsize=24, fontweight='bold', y=0.995)
+            fig.suptitle('Annual Non-Renewable Trends',
+                         fontsize=30, fontweight='bold', y=0.995)
 
             plt.tight_layout(rect=[0, 0.02, 1, 0.985])
 
@@ -833,36 +788,36 @@ def create_all_charts(all_data):
                             percentages.append(0)
 
                     ax1.plot(pct_years, percentages, marker='o', color=color,
-                             linewidth=4.5, markersize=9, label=source_name)
+                             linewidth=6, markersize=11, label=source_name)
                 
                 # ax2 = ABSOLUTE (bottom)
                 values_twh = [annual_totals[source_name][year] / 1000 for year in years_list]
                 ax2.plot(years_list, values_twh, marker='o', color=color,
-                         linewidth=4.5, markersize=9, label=source_name)
+                         linewidth=6, markersize=11, label=source_name)
 
                 lines_plotted += 1
 
         if lines_plotted > 0:
-            ax1.set_title('% of Total Generation', fontsize=22, fontweight='bold')
-            ax1.set_xlabel('Year', fontsize=18)
-            ax1.set_ylabel('Percentage (%)', fontsize=18)
+            ax1.set_title('% of Total Generation', fontsize=28, fontweight='bold')
+            ax1.set_xlabel('Year', fontsize=24)
+            ax1.set_ylabel('Percentage (%)', fontsize=24)
             ax1.set_ylim(0, 100)
-            ax1.tick_params(axis='both', labelsize=16)
+            ax1.tick_params(axis='both', labelsize=20)
             ax1.grid(True, linestyle='--', alpha=0.7)
 
-            ax2.set_title('Production (TWh)', fontsize=22, fontweight='bold')
-            ax2.set_xlabel('Year', fontsize=18)
-            ax2.set_ylabel('Energy Production (TWh)', fontsize=18)
+            ax2.set_title('Production (TWh)', fontsize=28, fontweight='bold')
+            ax2.set_xlabel('Year', fontsize=24)
+            ax2.set_ylabel('Energy Production (TWh)', fontsize=24)
             ax2.set_ylim(bottom=0)
-            ax2.tick_params(axis='both', labelsize=16)
+            ax2.tick_params(axis='both', labelsize=20)
             ax2.grid(True, linestyle='--', alpha=0.7)
 
             handles, labels = ax1.get_legend_handles_labels()
             fig.legend(handles, labels, loc='lower center', bbox_to_anchor=(0.5, -0.02), ncol=2,
-                       fontsize=16, frameon=False)
+                       fontsize=22, frameon=False)
 
-            fig.suptitle('Annual EU Energy Transition: Renewables vs Non-Renewables',
-                         fontsize=24, fontweight='bold', y=0.995)
+            fig.suptitle('Renewables vs Non-Renewables',
+                         fontsize=30, fontweight='bold', y=0.995)
 
             plt.tight_layout(rect=[0, 0.02, 1, 0.985])
 
@@ -910,7 +865,7 @@ def create_all_charts(all_data):
                     if len(years_to_plot) > 0:
                         color = ENTSOE_COLORS.get(source_name, 'black')
                         ax1.plot(years_to_plot, yoy_changes, marker='o', color=color,
-                                 linewidth=4.5, markersize=9, label=source_name)
+                                 linewidth=6, markersize=11, label=source_name)
                         lines_plotted += 1
 
         # Bottom plot: Just totals
@@ -934,7 +889,7 @@ def create_all_charts(all_data):
                     if len(years_to_plot) > 0:
                         color = ENTSOE_COLORS[category_name]
                         ax2.plot(years_to_plot, yoy_changes, marker='o', color=color,
-                                 linewidth=4.5, markersize=9, label=category_name)
+                                 linewidth=6, markersize=11, label=category_name)
 
         if lines_plotted > 0:
             if all_yoy_values:
@@ -947,20 +902,20 @@ def create_all_charts(all_data):
                 y_min_limit = -50
                 y_max_limit = 100
 
-            ax1.set_title('All Energy Sources', fontsize=22, fontweight='bold')
-            ax1.set_xlabel('Year', fontsize=18)
-            ax1.set_ylabel('% Change from 2015', fontsize=18)
+            ax1.set_title('All Energy Sources', fontsize=28, fontweight='bold')
+            ax1.set_xlabel('Year', fontsize=24)
+            ax1.set_ylabel('% Change from 2015', fontsize=24)
             ax1.set_ylim(y_min_limit, y_max_limit)
             ax1.axhline(y=0, color='black', linestyle='--', linewidth=1, alpha=0.5)
-            ax1.tick_params(axis='both', labelsize=16)
+            ax1.tick_params(axis='both', labelsize=20)
             ax1.grid(True, linestyle='--', alpha=0.7)
 
-            ax2.set_title('Renewables vs Non-Renewables', fontsize=22, fontweight='bold')
-            ax2.set_xlabel('Year', fontsize=18)
-            ax2.set_ylabel('% Change from 2015', fontsize=18)
+            ax2.set_title('Renewables vs Non-Renewables', fontsize=28, fontweight='bold')
+            ax2.set_xlabel('Year', fontsize=24)
+            ax2.set_ylabel('% Change from 2015', fontsize=24)
             ax2.set_ylim(y_min_limit, y_max_limit)
             ax2.axhline(y=0, color='black', linestyle='--', linewidth=1, alpha=0.5)
-            ax2.tick_params(axis='both', labelsize=16)
+            ax2.tick_params(axis='both', labelsize=20)
             ax2.grid(True, linestyle='--', alpha=0.7)
 
             handles1, labels1 = ax1.get_legend_handles_labels()
@@ -969,10 +924,10 @@ def create_all_charts(all_data):
             all_handles = handles1 + handles2
             all_labels = labels1 + labels2
             fig.legend(all_handles, all_labels, loc='lower center', bbox_to_anchor=(0.5, -0.02),
-                       ncol=6, fontsize=13, frameon=False)
+                       ncol=6, fontsize=17, frameon=False)
 
-            fig.suptitle('Year-over-Year Change in EU Energy Production vs 2015 Baseline',
-                         fontsize=24, fontweight='bold', y=0.995)
+            fig.suptitle('Year-over-Year Change vs 2015',
+                         fontsize=30, fontweight='bold', y=0.995)
 
             plt.tight_layout(rect=[0, 0.02, 1, 0.985])
 
@@ -1000,8 +955,8 @@ def main():
     print("  ✓ Renewable vs non-renewable by period")
     print("  ✓ Annual trend charts")
     print("  ✓ YoY change vs 2015 baseline")
-    print("  ✓ Consistent styling: 4.5px lines, no frame legends")
-    print("  ✓ Optimized fonts (26/22/18 for individual, 22/18/16 for combined)")
+    print("  ✓ LARGER fonts and THICKER lines for mobile")
+    print("  ✓ CLEARER titles (no restrictions on Y-axis)")
     print("=" * 60)
 
     if not os.environ.get('GOOGLE_CREDENTIALS_JSON'):
