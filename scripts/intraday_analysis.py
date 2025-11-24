@@ -457,17 +457,25 @@ def calculate_daily_statistics(data_dict):
                 except ValueError:
                     cutoff_idx = len([t for t in standard_times if t <= cutoff_time_str])
 
+                # Interpolate only up to cutoff, leave future as NaN
                 aligned_energy.iloc[:cutoff_idx] = aligned_energy.iloc[:cutoff_idx].interpolate()
                 aligned_percentage.iloc[:cutoff_idx] = aligned_percentage.iloc[:cutoff_idx].interpolate()
 
                 aligned_energy.iloc[cutoff_idx:] = np.nan
                 aligned_percentage.iloc[cutoff_idx:] = np.nan
+                
+                # CRITICAL FIX: Fill NaN ONLY in the past (before cutoff), not in the future
+                # This prevents the line from dropping to 0 at the cutoff
+                aligned_energy.iloc[:cutoff_idx] = aligned_energy.iloc[:cutoff_idx].fillna(0.1)
+                aligned_percentage.iloc[:cutoff_idx] = aligned_percentage.iloc[:cutoff_idx].fillna(0)
+                # Future values remain NaN and won't be plotted
             else:
                 aligned_energy = aligned_energy.interpolate()
                 aligned_percentage = aligned_percentage.interpolate()
-
-            aligned_energy = aligned_energy.fillna(0.1)
-            aligned_percentage = aligned_percentage.fillna(0)
+                
+                # For historical data, fill remaining NaN values
+                aligned_energy = aligned_energy.fillna(0.1)
+                aligned_percentage = aligned_percentage.fillna(0)
 
             stats[period_name] = {
                 'time_bins': standard_times,
@@ -689,12 +697,12 @@ def plot_analysis(stats_data, source_type, output_file):
         ax.set_xticks(tick_positions)
         ax.set_xticklabels([time_labels[i] for i in tick_positions], rotation=45)
 
-    # Legend below plots - LARGER FONT
+    # Legend below plots - LARGER FONT, positioned lower to avoid overlap
     handles1, labels1 = ax1.get_legend_handles_labels()
-    fig.legend(handles1, labels1, loc='lower center', bbox_to_anchor=(0.5, -0.02),
+    fig.legend(handles1, labels1, loc='lower center', bbox_to_anchor=(0.5, -0.05),
                ncol=3, fontsize=20, frameon=False, columnspacing=1.5)
 
-    plt.tight_layout(rect=[0, 0.02, 1, 0.985])
+    plt.tight_layout(rect=[0, 0.05, 1, 0.985])
 
     plt.savefig(output_file, dpi=150, bbox_inches='tight')
     print(f"Saved plot to {output_file}")
