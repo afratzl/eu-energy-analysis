@@ -896,13 +896,17 @@ def generate_plot_for_source(source_type, corrected_data, output_file):
 def main():
     """
     Main function - orchestrates the 3 phases
+    Generates ALL 12 plots from single data collection
     """
-    parser = argparse.ArgumentParser(description='EU Energy Intraday Analysis v2')
-    parser.add_argument('--source', required=True,
-                       choices=ATOMIC_SOURCES + AGGREGATE_SOURCES,
-                       help='Energy source to analyze')
+    parser = argparse.ArgumentParser(description='EU Energy Intraday Analysis v2 - Batch Mode')
+    # No --source argument needed - we generate all plots in one run
     
     args = parser.parse_args()
+    
+    print("\n" + "=" * 80)
+    print("EU ENERGY INTRADAY ANALYSIS - BATCH MODE")
+    print("Generating all 12 source plots from single data collection")
+    print("=" * 80)
     
     # Get API key
     api_key = os.environ.get('ENTSOE_API_KEY')
@@ -911,15 +915,22 @@ def main():
         sys.exit(1)
     
     try:
-        # Phase 1: Collect all data
+        # Phase 1: Collect all data ONCE
         data_matrix, periods = collect_all_data(api_key)
         
-        # Phase 2: Apply projections and corrections
+        # Phase 2: Apply projections and corrections ONCE
         corrected_data = apply_projections_and_corrections(data_matrix)
         
-        # Phase 3: Generate plot for requested source
-        output_file = f'plots/{args.source.replace("-", "_")}_analysis.png'
-        generate_plot_for_source(args.source, corrected_data, output_file)
+        # Phase 3: Generate ALL 12 plots from corrected data
+        print("\n" + "=" * 80)
+        print("PHASE 3: GENERATING ALL 12 PLOTS")
+        print("=" * 80)
+        
+        all_sources = ATOMIC_SOURCES + AGGREGATE_SOURCES
+        for i, source in enumerate(all_sources, 1):
+            print(f"\n[{i}/{len(all_sources)}] Processing {DISPLAY_NAMES[source]}...")
+            output_file = f'plots/{source.replace("-", "_")}_analysis.png'
+            generate_plot_for_source(source, corrected_data, output_file)
         
         # Create timestamp file
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')
@@ -927,7 +938,9 @@ def main():
             f.write(f'<p>Last updated: {timestamp}</p>')
         
         print(f"\n" + "=" * 80)
-        print(f"✓ COMPLETE! Plot saved to {output_file}")
+        print(f"✓ COMPLETE! All {len(all_sources)} plots generated successfully")
+        print(f"   - 10 atomic sources (Solar, Wind, Hydro, Biomass, Geothermal, Gas, Coal, Nuclear, Oil, Waste)")
+        print(f"   - 2 aggregates (All Renewables, All Non-Renewables)")
         print("=" * 80)
         
     except Exception as e:
