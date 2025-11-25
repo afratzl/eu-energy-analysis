@@ -37,16 +37,16 @@
                 <optgroup label="📈 Period Comparisons">
                     <option value="period-2015-2019">All: 2015-2019</option>
                     <option value="period-2020-2024">All: 2020-2024</option>
-                    <option value="period-2025-2029">All: 2025-2029</option>
-                    <option value="ren-vs-nonren-2015-2019">Ren vs Non-Ren: 2015-2019</option>
-                    <option value="ren-vs-nonren-2020-2024">Ren vs Non-Ren: 2020-2024</option>
-                    <option value="ren-vs-nonren-2025-2029">Ren vs Non-Ren: 2025-2029</option>
+                    <option value="period-2025-2029" selected>All: 2025-2029</option>
+                    <option value="ren-vs-nonren-2015-2019">Aggregates: 2015-2019</option>
+                    <option value="ren-vs-nonren-2020-2024">Aggregates: 2020-2024</option>
+                    <option value="ren-vs-nonren-2025-2029">Aggregates: 2025-2029</option>
                 </optgroup>
                 
                 <optgroup label="📉 Annual Trends">
                     <option value="annual-renewable">Renewables</option>
                     <option value="annual-nonrenewable">Non-Renewables</option>
-                    <option value="transition" selected>Ren vs Non-Ren</option>
+                    <option value="transition">Aggregates</option>
                     <option value="yoy">YoY vs 2015</option>
                 </optgroup>
             </select>
@@ -87,15 +87,15 @@
             },
             'ren-vs-nonren-2015-2019': {
                 image: 'plots/eu_monthly_renewable_vs_nonrenewable_mean_2015_2019_combined.png',
-                title: 'Renewable vs Non-Renewable: 2015-2019'
+                title: 'Aggregates: 2015-2019'
             },
             'ren-vs-nonren-2020-2024': {
                 image: 'plots/eu_monthly_renewable_vs_nonrenewable_mean_2020_2024_combined.png',
-                title: 'Renewable vs Non-Renewable: 2020-2024'
+                title: 'Aggregates: 2020-2024'
             },
             'ren-vs-nonren-2025-2029': {
                 image: 'plots/eu_monthly_renewable_vs_nonrenewable_mean_2025_2029_combined.png',
-                title: 'Renewable vs Non-Renewable: 2025-2029'
+                title: 'Aggregates: 2025-2029'
             },
             'annual-renewable': {
                 image: 'plots/eu_annual_renewable_trends_combined.png',
@@ -107,7 +107,7 @@
             },
             'transition': {
                 image: 'plots/eu_annual_renewable_vs_non_renewable_combined.png',
-                title: 'Renewables vs Non-Renewables'
+                title: 'Aggregates'
             },
             'yoy': {
                 image: 'plots/eu_annual_yoy_change_vs_2015.png',
@@ -131,7 +131,7 @@
 
         // Load default chart on page load
         window.addEventListener('DOMContentLoaded', () => {
-            showChart('transition');
+            showChart('period-2025-2029');
         });
     </script>
 
