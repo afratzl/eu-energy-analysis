@@ -1,8 +1,16 @@
 #!/usr/bin/env python3
 """
-Unified Intraday Energy Analysis Script
-FIXED: Uses total_generation instead of load for percentage calculation
-UPDATED: Larger fonts and clearer titles for mobile
+Unified Intraday Energy Analysis Script - REFACTORED
+Architecture:
+  Phase 1: Data Collection - Fetch all atomic sources + aggregates
+  Phase 2: Projection & Correction - Apply component-level corrections
+  Phase 3: Plot Generation - Create visualizations from corrected data
+
+Key improvements:
+- Weekly hourly averages for projection (not daily)
+- Component-level aggregate correction
+- Proper Total Generation correction using all sources
+- Debug output for threshold violations
 """
 
 from entsoe import EntsoePandasClient
@@ -29,6 +37,19 @@ EU_COUNTRIES = [
     'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL',
     'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE'
 ]
+
+# Atomic sources (cannot be broken down further)
+ATOMIC_SOURCES = ['solar', 'wind', 'hydro', 'biomass', 'geothermal', 
+                  'gas', 'coal', 'nuclear', 'oil', 'waste']
+
+# Aggregate sources
+AGGREGATE_SOURCES = ['all-renewables', 'all-non-renewables']
+
+# Aggregate definitions
+AGGREGATE_DEFINITIONS = {
+    'all-renewables': ['solar', 'wind', 'hydro', 'biomass', 'geothermal'],
+    'all-non-renewables': ['gas', 'coal', 'nuclear', 'oil', 'waste']
+}
 
 # Energy source keyword mapping
 SOURCE_KEYWORDS = {
@@ -169,6 +190,7 @@ def interpolate_country_data(country_series, country_name, mark_extrapolated=Fal
 def aggregate_eu_data(countries, start_date, end_date, client, source_keywords, data_type='generation', mark_extrapolated=False):
     """
     Aggregate energy data across EU countries
+    Returns: (eu_total, country_data_df, successful_countries)
     """
     all_interpolated_data = []
     successful_countries = []
@@ -188,23 +210,8 @@ def aggregate_eu_data(countries, start_date, end_date, client, source_keywords, 
                         all_interpolated_data.append(interpolated)
                         successful_countries.append(country)
 
-            elif data_type == 'load':
-                if isinstance(country_data, pd.Series):
-                    country_series = country_data
-                elif isinstance(country_data, pd.DataFrame) and len(country_data.columns) == 1:
-                    country_series = country_data.iloc[:, 0]
-                else:
-                    country_series = country_data.sum(axis=1)
-
-                country_series.name = country
-                interpolated = interpolate_country_data(country_series, country, mark_extrapolated=mark_extrapolated)
-
-                if interpolated is not None:
-                    all_interpolated_data.append(interpolated)
-                    successful_countries.append(country)
-
     if not all_interpolated_data:
-        return pd.DataFrame(), pd.DataFrame(), []
+        return pd.Series(dtype=float), pd.DataFrame(), []
 
     combined_df = pd.concat(all_interpolated_data, axis=1)
     eu_total = combined_df.sum(axis=1, skipna=True)
@@ -212,32 +219,31 @@ def aggregate_eu_data(countries, start_date, end_date, client, source_keywords, 
     return eu_total, combined_df, successful_countries
 
 
-def load_intraday_data(source_type, api_key):
+# ============================================================================
+# PHASE 1: DATA COLLECTION
+# ============================================================================
+
+def collect_all_data(api_key):
     """
-    Load 15-minute data from ENTSO-E with FIXED percentage calculation
+    Phase 1: Collect ALL data for all atomic sources, aggregates, and total generation
+    Returns a structured data object with everything we need
     """
     client = EntsoePandasClient(api_key=api_key)
-    source_keywords = SOURCE_KEYWORDS[source_type]
     
-    # Keywords for ALL generation (to calculate correct percentage)
-    all_generation_keywords = SOURCE_KEYWORDS['all-renewables'] + SOURCE_KEYWORDS['all-non-renewables']
+    print("=" * 80)
+    print("PHASE 1: DATA COLLECTION")
+    print("=" * 80)
     
-    print("=" * 60)
-    print(f"LOADING {DISPLAY_NAMES[source_type].upper()} DATA")
-    print("=" * 60)
-
+    # Define periods
     today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     yesterday = today - timedelta(days=1)
-
     week_ago_end = yesterday
     week_ago_start = week_ago_end - timedelta(days=7)
-
     year_ago_end = datetime(today.year - 1, yesterday.month, yesterday.day)
     year_ago_start = year_ago_end - timedelta(days=7)
-
     two_years_ago_end = datetime(today.year - 2, yesterday.month, yesterday.day)
     two_years_ago_start = two_years_ago_end - timedelta(days=7)
-
+    
     periods = {
         'today': (today, today + timedelta(days=1)),
         'yesterday': (yesterday, yesterday + timedelta(days=1)),
@@ -245,199 +251,396 @@ def load_intraday_data(source_type, api_key):
         'year_ago': (year_ago_start, year_ago_end),
         'two_years_ago': (two_years_ago_start, two_years_ago_end)
     }
-
-    all_data = {}
-    all_country_data = {}
-
+    
+    # Data storage
+    data_matrix = {
+        'atomic_sources': {},  # source -> period -> country_df
+        'aggregates': {},      # source -> period -> eu_total_series
+        'total_generation': {} # period -> country_df
+    }
+    
+    # Fetch atomic sources (with country breakdown)
+    print("\n📊 Fetching 10 Atomic Sources (with country data)...")
+    for source in ATOMIC_SOURCES:
+        print(f"\n  {DISPLAY_NAMES[source]}:")
+        data_matrix['atomic_sources'][source] = {}
+        
+        for period_name, (start_date, end_date) in periods.items():
+            mark_extrap = (period_name in ['today', 'yesterday'])
+            
+            eu_total, country_df, countries = aggregate_eu_data(
+                EU_COUNTRIES, start_date, end_date, client,
+                SOURCE_KEYWORDS[source], 'generation', mark_extrapolated=mark_extrap
+            )
+            
+            if not country_df.empty:
+                data_matrix['atomic_sources'][source][period_name] = country_df
+                print(f"    {period_name}: ✓ {len(countries)} countries, {len(country_df)} timestamps")
+            else:
+                print(f"    {period_name}: ✗ No data")
+    
+    # Fetch aggregates (EU totals only, no country breakdown needed)
+    print("\n📊 Fetching 2 Aggregate Sources (EU totals only)...")
+    all_gen_keywords = SOURCE_KEYWORDS['all-renewables'] + SOURCE_KEYWORDS['all-non-renewables']
+    
+    for source in AGGREGATE_SOURCES:
+        print(f"\n  {DISPLAY_NAMES[source]}:")
+        data_matrix['aggregates'][source] = {}
+        
+        for period_name, (start_date, end_date) in periods.items():
+            mark_extrap = (period_name in ['today', 'yesterday'])
+            
+            eu_total, _, countries = aggregate_eu_data(
+                EU_COUNTRIES, start_date, end_date, client,
+                SOURCE_KEYWORDS[source], 'generation', mark_extrapolated=mark_extrap
+            )
+            
+            if not eu_total.empty:
+                data_matrix['aggregates'][source][period_name] = eu_total
+                print(f"    {period_name}: ✓ {len(eu_total)} timestamps")
+            else:
+                print(f"    {period_name}: ✗ No data")
+    
+    # Fetch Total Generation (with country breakdown for denominator correction)
+    print("\n📊 Fetching Total Generation (with country data)...")
     for period_name, (start_date, end_date) in periods.items():
-        print(f"\n{period_name.upper()}: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
-
         mark_extrap = (period_name in ['today', 'yesterday'])
-
-        # Fetch specific energy source
-        energy_data, energy_by_country, energy_countries = aggregate_eu_data(
-            EU_COUNTRIES, start_date, end_date, client, source_keywords, 'generation', mark_extrapolated=mark_extrap
+        
+        eu_total, country_df, countries = aggregate_eu_data(
+            EU_COUNTRIES, start_date, end_date, client,
+            all_gen_keywords, 'generation', mark_extrapolated=mark_extrap
         )
         
-        # Fetch TOTAL GENERATION (not load) for correct percentage
-        total_gen_data, total_gen_by_country, total_gen_countries = aggregate_eu_data(
-            EU_COUNTRIES, start_date, end_date, client, all_generation_keywords, 'generation', mark_extrapolated=mark_extrap
+        if not country_df.empty:
+            data_matrix['total_generation'][period_name] = country_df
+            print(f"  {period_name}: ✓ {len(countries)} countries, {len(country_df)} timestamps")
+        else:
+            print(f"  {period_name}: ✗ No data")
+    
+    print("\n✓ Data collection complete!")
+    return data_matrix, periods
+
+
+# ============================================================================
+# PHASE 2: PROJECTION & CORRECTION
+# ============================================================================
+
+def apply_projections_and_corrections(data_matrix):
+    """
+    Phase 2: Apply 10% threshold and correct aggregates/total_gen using atomic sources
+    Uses weekly hourly averages (e.g., average of all 15:00 times from past week)
+    """
+    print("\n" + "=" * 80)
+    print("PHASE 2: PROJECTION & CORRECTION")
+    print("=" * 80)
+    
+    corrected_data = {}
+    
+    # Process TODAY
+    if 'today' in data_matrix['total_generation'] and 'week_ago' in data_matrix['total_generation']:
+        print("\n🔧 Processing TODAY...")
+        corrected_data['today'] = apply_corrections_for_period(
+            data_matrix, 'today', 'week_ago'
         )
-
-        if not energy_data.empty and not total_gen_data.empty:
-            common_times = energy_data.index.intersection(total_gen_data.index)
-
-            if len(common_times) > 0:
-                period_df = pd.DataFrame({
-                    'timestamp': common_times,
-                    'energy_production': energy_data.loc[common_times].values,
-                    'total_generation': total_gen_data.loc[common_times].values
-                })
-
-                period_df = period_df[
-                    (period_df['timestamp'] >= pd.Timestamp(start_date, tz='Europe/Brussels')) &
-                    (period_df['timestamp'] < pd.Timestamp(end_date, tz='Europe/Brussels'))
-                ]
-
-                # FIXED: Calculate percentage from total_generation, not load
-                period_df['energy_percentage'] = np.clip(
-                    (period_df['energy_production'] / period_df['total_generation']) * 100, 0, 100
-                )
-
-                period_df['date'] = period_df['timestamp'].dt.strftime('%Y-%m-%d')
-                period_df['time'] = period_df['timestamp'].dt.strftime('%H:%M')
-
-                all_data[period_name] = period_df
-
-                if not energy_by_country.empty:
-                    all_country_data[period_name] = energy_by_country.loc[period_df['timestamp']]
-                if not total_gen_by_country.empty:
-                    all_country_data[f'{period_name}_total_gen'] = total_gen_by_country.loc[period_df['timestamp']]
-
-                avg_pct = period_df['energy_percentage'].mean()
-                print(f"  ✓ {len(period_df)} points, avg {DISPLAY_NAMES[source_type]}: {avg_pct:.1f}%")
-
-    # Create projected values
-    if 'week_ago' in all_country_data and 'today' in all_country_data and 'today' in all_data:
-        if 'today_total_gen' in all_country_data and 'week_ago_total_gen' in all_country_data:
-            print("\nCreating projected values for TODAY...")
-            all_data['today_projected'] = create_projected_data(
-                all_data['today'],
-                all_country_data['today'], all_country_data['week_ago'],
-                all_country_data['today_total_gen'], all_country_data['week_ago_total_gen'],
-                'today'
-            )
-
-    if 'week_ago' in all_country_data and 'yesterday' in all_country_data and 'yesterday' in all_data:
-        if 'yesterday_total_gen' in all_country_data and 'week_ago_total_gen' in all_country_data:
-            print("Creating projected values for YESTERDAY...")
-            all_data['yesterday_projected'] = create_projected_data(
-                all_data['yesterday'],
-                all_country_data['yesterday'], all_country_data['week_ago'],
-                all_country_data['yesterday_total_gen'], all_country_data['week_ago_total_gen'],
-                'yesterday'
-            )
-
-    return all_data
+        corrected_data['today_projected'] = corrected_data['today']  # Same data after correction
+    
+    # Process YESTERDAY
+    if 'yesterday' in data_matrix['total_generation'] and 'week_ago' in data_matrix['total_generation']:
+        print("\n🔧 Processing YESTERDAY...")
+        corrected_data['yesterday'] = apply_corrections_for_period(
+            data_matrix, 'yesterday', 'week_ago'
+        )
+        corrected_data['yesterday_projected'] = corrected_data['yesterday']  # Same data after correction
+    
+    # Historical periods (no projection needed)
+    for period in ['week_ago', 'year_ago', 'two_years_ago']:
+        if period in data_matrix['total_generation']:
+            print(f"\n📋 Processing {period.upper()} (no projection)...")
+            corrected_data[period] = build_period_data_no_projection(data_matrix, period)
+    
+    print("\n✓ Projection & correction complete!")
+    return corrected_data
 
 
-def create_projected_data(actual_df, actual_energy_countries, week_ago_energy_countries,
-                          actual_total_gen_countries, week_ago_total_gen_countries, period_name='today'):
+def apply_corrections_for_period(data_matrix, target_period, reference_period):
     """
-    Create projected values using TOTAL GENERATION (not load)
+    Apply component-level corrections for a specific period
+    Uses weekly hourly averages for threshold comparison
     """
-    print(f"  Creating projected data for {period_name}...")
+    print(f"  Analyzing {target_period} against {reference_period}...")
+    
+    # Build weekly hourly averages for each atomic source
+    weekly_hourly_avgs = {}
+    for source in ATOMIC_SOURCES:
+        if source in data_matrix['atomic_sources'] and reference_period in data_matrix['atomic_sources'][source]:
+            ref_data = data_matrix['atomic_sources'][source][reference_period]
+            
+            # Add time column
+            ref_data_with_time = ref_data.copy()
+            ref_data_with_time['time'] = ref_data_with_time.index.strftime('%H:%M')
+            
+            # Group by time to get hourly averages across the week
+            weekly_hourly_avgs[source] = ref_data_with_time.groupby('time').mean(numeric_only=True)
+    
+    # Build weekly hourly average for total generation
+    total_gen_weekly_avg = None
+    if reference_period in data_matrix['total_generation']:
+        ref_total_gen = data_matrix['total_generation'][reference_period]
+        ref_total_gen_with_time = ref_total_gen.copy()
+        ref_total_gen_with_time['time'] = ref_total_gen_with_time.index.strftime('%H:%M')
+        total_gen_weekly_avg = ref_total_gen_with_time.groupby('time').mean(numeric_only=True)
+    
+    # Get target period data
+    target_atomic = {src: data_matrix['atomic_sources'][src].get(target_period) 
+                     for src in ATOMIC_SOURCES if src in data_matrix['atomic_sources']}
+    target_total_gen = data_matrix['total_generation'].get(target_period)
+    
+    if target_total_gen is None:
+        return {}
+    
+    # Build corrected data for each source
+    corrected_sources = {}
+    correction_log = []
+    
+    for source in ATOMIC_SOURCES + AGGREGATE_SOURCES:
+        corrected_sources[source] = {}
+    
+    # Process each timestamp
+    for timestamp in target_total_gen.index:
+        time_str = timestamp.strftime('%H:%M')
+        
+        # Correct atomic sources
+        for source in ATOMIC_SOURCES:
+            if source not in target_atomic or target_atomic[source] is None:
+                continue
+            
+            if timestamp not in target_atomic[source].index:
+                continue
+            
+            source_row = target_atomic[source].loc[timestamp]
+            
+            # Initialize this timestamp for this source
+            if timestamp not in corrected_sources[source]:
+                corrected_sources[source][timestamp] = {}
+            
+            for country in source_row.index:
+                actual_val = source_row[country]
+                
+                # Default: use actual value
+                corrected_val = actual_val if not pd.isna(actual_val) else 0
+                
+                # Get weekly hourly average for this source-country-time
+                if source in weekly_hourly_avgs and time_str in weekly_hourly_avgs[source].index:
+                    if country in weekly_hourly_avgs[source].columns:
+                        week_avg = weekly_hourly_avgs[source].loc[time_str, country]
+                        
+                        if not pd.isna(week_avg) and week_avg > 0:
+                            threshold = 0.1 * week_avg
+                            
+                            # Check if below threshold
+                            if pd.isna(actual_val) or actual_val < threshold:
+                                correction_log.append({
+                                    'time': time_str,
+                                    'source': source,
+                                    'country': country,
+                                    'actual': actual_val if not pd.isna(actual_val) else 0,
+                                    'expected': week_avg,
+                                    'threshold': threshold
+                                })
+                                corrected_val = week_avg
+                
+                # Store corrected value
+                corrected_sources[source][timestamp][country] = corrected_val
+    
+    # Print correction log
+    if correction_log:
+        print(f"\n  🚨 Detected {len(correction_log)} values below 10% threshold:")
+        for log in correction_log[:20]:  # Print first 20
+            print(f"    {log['time']} | {log['country']}-{log['source']}: "
+                  f"{log['actual']:.1f} MW < 10% of {log['expected']:.1f} MW "
+                  f"(threshold: {log['threshold']:.1f} MW) → Using {log['expected']:.1f} MW")
+        if len(correction_log) > 20:
+            print(f"    ... and {len(correction_log) - 20} more corrections")
+    else:
+        print("  ✓ No corrections needed")
+    
+    # Build aggregate sources from corrected atomic sources
+    for agg_source in AGGREGATE_SOURCES:
+        components = AGGREGATE_DEFINITIONS[agg_source]
+        
+        for timestamp in target_total_gen.index:
+            total = 0
+            for component in components:
+                if timestamp in corrected_sources[component]:
+                    total += sum(corrected_sources[component][timestamp].values())
+            
+            if timestamp not in corrected_sources[agg_source]:
+                corrected_sources[agg_source][timestamp] = {}
+            corrected_sources[agg_source][timestamp]['EU'] = total
+    
+    # Build corrected total generation from all atomic sources
+    corrected_total_gen = {}
+    for timestamp in target_total_gen.index:
+        total = 0
+        for source in ATOMIC_SOURCES:
+            if timestamp in corrected_sources[source]:
+                total += sum(corrected_sources[source][timestamp].values())
+        corrected_total_gen[timestamp] = total
+    
+    # Convert to output format
+    result = {
+        'atomic_sources': corrected_sources,
+        'total_generation': corrected_total_gen
+    }
+    
+    # Add aggregates at top level for easy access
+    for agg_source in AGGREGATE_SOURCES:
+        result[agg_source] = corrected_sources[agg_source]
+    
+    return result
 
-    week_ago_energy_list = set(week_ago_energy_countries.columns)
-    today_energy_list = set(actual_energy_countries.columns)
 
-    week_ago_total_gen_list = set(week_ago_total_gen_countries.columns)
-    today_total_gen_list = set(actual_total_gen_countries.columns)
+def build_period_data_no_projection(data_matrix, period):
+    """
+    Build period data without projection (for historical periods)
+    Returns structure matching apply_corrections_for_period
+    """
+    atomic_sources_data = {}
+    aggregate_sources_data = {}
+    
+    # Atomic sources
+    for source in ATOMIC_SOURCES:
+        if source in data_matrix['atomic_sources'] and period in data_matrix['atomic_sources'][source]:
+            source_data = data_matrix['atomic_sources'][source][period]
+            atomic_sources_data[source] = {}
+            
+            for timestamp in source_data.index:
+                atomic_sources_data[source][timestamp] = {}
+                for country in source_data.columns:
+                    val = source_data.loc[timestamp, country]
+                    atomic_sources_data[source][timestamp][country] = val if not pd.isna(val) else 0
+    
+    # Aggregates - build from atomic sources
+    for agg_source in AGGREGATE_SOURCES:
+        components = AGGREGATE_DEFINITIONS[agg_source]
+        aggregate_sources_data[agg_source] = {}
+        
+        # Get all timestamps from any component
+        all_timestamps = set()
+        for component in components:
+            if component in atomic_sources_data:
+                all_timestamps.update(atomic_sources_data[component].keys())
+        
+        for timestamp in all_timestamps:
+            total = 0
+            for component in components:
+                if component in atomic_sources_data and timestamp in atomic_sources_data[component]:
+                    total += sum(atomic_sources_data[component][timestamp].values())
+            aggregate_sources_data[agg_source][timestamp] = {'EU': total}
+    
+    # Total generation from all atomic sources
+    total_generation_data = {}
+    all_timestamps = set()
+    for source in ATOMIC_SOURCES:
+        if source in atomic_sources_data:
+            all_timestamps.update(atomic_sources_data[source].keys())
+    
+    for timestamp in all_timestamps:
+        total = 0
+        for source in ATOMIC_SOURCES:
+            if source in atomic_sources_data and timestamp in atomic_sources_data[source]:
+                total += sum(atomic_sources_data[source][timestamp].values())
+        total_generation_data[timestamp] = total
+    
+    # Return structure matching apply_corrections_for_period
+    result = {
+        'atomic_sources': atomic_sources_data,
+        'total_generation': total_generation_data
+    }
+    
+    # Add aggregates at top level for easy access
+    for agg_source, agg_data in aggregate_sources_data.items():
+        result[agg_source] = agg_data
+    
+    return result
 
-    completely_missing_energy = week_ago_energy_list - today_energy_list
-    completely_missing_total_gen = week_ago_total_gen_list - today_total_gen_list
 
-    week_ago_energy_with_time = week_ago_energy_countries.copy()
-    week_ago_energy_with_time['time'] = week_ago_energy_with_time.index.strftime('%H:%M')
-    week_ago_energy_avg = week_ago_energy_with_time.groupby('time').mean(numeric_only=True)
+# ============================================================================
+# PHASE 3: PLOT GENERATION
+# ============================================================================
 
-    week_ago_total_gen_with_time = week_ago_total_gen_countries.copy()
-    week_ago_total_gen_with_time['time'] = week_ago_total_gen_with_time.index.strftime('%H:%M')
-    week_ago_total_gen_avg = week_ago_total_gen_with_time.groupby('time').mean(numeric_only=True)
+def convert_corrected_data_to_plot_format(source_type, corrected_data):
+    """
+    Convert corrected data structure to format expected by plotting functions
+    Returns: dict with period -> DataFrame mapping
+    """
+    plot_data = {}
+    
+    for period_name, period_data in corrected_data.items():
+        if not period_data:
+            continue
+        
+        # Determine if atomic or aggregate source
+        if source_type in ATOMIC_SOURCES:
+            if 'atomic_sources' not in period_data or source_type not in period_data['atomic_sources']:
+                continue
+            source_data = period_data['atomic_sources'][source_type]
+        elif source_type in AGGREGATE_SOURCES:
+            if source_type not in period_data:
+                continue
+            source_data = period_data[source_type]
+        else:
+            continue
+        
+        total_gen_data = period_data.get('total_generation', {})
+        
+        # Build DataFrame
+        rows = []
+        for timestamp in sorted(source_data.keys()):
+            # Sum across countries for this source
+            energy_prod = sum(source_data[timestamp].values())
+            total_gen = total_gen_data.get(timestamp, energy_prod)  # Fallback if missing
+            
+            if total_gen > 0:
+                percentage = np.clip((energy_prod / total_gen) * 100, 0, 100)
+            else:
+                percentage = 0
+            
+            rows.append({
+                'timestamp': timestamp,
+                'energy_production': energy_prod,
+                'total_generation': total_gen,
+                'energy_percentage': percentage,
+                'date': timestamp.strftime('%Y-%m-%d'),
+                'time': timestamp.strftime('%H:%M')
+            })
+        
+        if rows:
+            plot_data[period_name] = pd.DataFrame(rows)
+    
+    return plot_data
 
-    projected_df = actual_df.copy()
-    missing_by_time = {}
 
-    for i in range(len(actual_df)):
-        time_str = actual_df.iloc[i]['time']
-        timestamp = actual_df.iloc[i]['timestamp']
-
-        missing_countries = []
-        projected_energy_total = 0
-        projected_total_gen_total = 0
-        has_missing_data = False
-
-        if timestamp in actual_energy_countries.index:
-            actual_energy_row = actual_energy_countries.loc[timestamp]
-
-            for country in today_energy_list:
-                actual_val = actual_energy_row[country]
-
-                if pd.isna(actual_val) or actual_val < 1:
-                    missing_countries.append(country)
-                    has_missing_data = True
-                    if time_str in week_ago_energy_avg.index and country in week_ago_energy_avg.columns:
-                        proj_val = week_ago_energy_avg.loc[time_str, country]
-                        if not pd.isna(proj_val):
-                            projected_energy_total += proj_val
-                else:
-                    projected_energy_total += actual_val
-
-        for country in completely_missing_energy:
-            if country not in missing_countries:
-                missing_countries.append(country)
-            has_missing_data = True
-            if time_str in week_ago_energy_avg.index and country in week_ago_energy_avg.columns:
-                proj_val = week_ago_energy_avg.loc[time_str, country]
-                if not pd.isna(proj_val):
-                    projected_energy_total += proj_val
-
-        if timestamp in actual_total_gen_countries.index:
-            actual_total_gen_row = actual_total_gen_countries.loc[timestamp]
-
-            for country in today_total_gen_list:
-                actual_val = actual_total_gen_row[country]
-
-                if pd.isna(actual_val) or actual_val < 1:
-                    has_missing_data = True
-                    if time_str in week_ago_total_gen_avg.index and country in week_ago_total_gen_avg.columns:
-                        proj_val = week_ago_total_gen_avg.loc[time_str, country]
-                        if not pd.isna(proj_val):
-                            projected_total_gen_total += proj_val
-                else:
-                    projected_total_gen_total += actual_val
-
-        for country in completely_missing_total_gen:
-            has_missing_data = True
-            if time_str in week_ago_total_gen_avg.index and country in week_ago_total_gen_avg.columns:
-                proj_val = week_ago_total_gen_avg.loc[time_str, country]
-                if not pd.isna(proj_val):
-                    projected_total_gen_total += proj_val
-
-        if has_missing_data:
-            if missing_countries:
-                missing_by_time[time_str] = sorted(set(missing_countries))
-
-            projected_df.iloc[i, projected_df.columns.get_loc('energy_production')] = projected_energy_total
-            projected_df.iloc[i, projected_df.columns.get_loc('total_generation')] = projected_total_gen_total
-
-            if projected_total_gen_total > 0:
-                projected_df.iloc[i, projected_df.columns.get_loc('energy_percentage')] = np.clip(
-                    (projected_energy_total / projected_total_gen_total) * 100, 0, 100
-                )
-
-    if missing_by_time:
-        all_missing = set()
-        for countries in missing_by_time.values():
-            all_missing.update(countries)
-        print(f"  Missing: {', '.join(sorted(all_missing))}")
-
-    return projected_df
+def create_time_axis():
+    """
+    Create time axis for 15-minute bins
+    """
+    times = []
+    for hour in range(24):
+        for minute in [0, 15, 30, 45]:
+            times.append(f"{hour:02d}:{minute:02d}")
+    return times
 
 
 def calculate_daily_statistics(data_dict):
     """
-    Calculate daily statistics
+    Calculate daily statistics for plotting
     """
-    standard_times = []
-    for hour in range(24):
-        for minute in [0, 15, 30, 45]:
-            standard_times.append(f"{hour:02d}:{minute:02d}")
-
+    standard_times = create_time_axis()
     stats = {}
 
     for period_name, df in data_dict.items():
-        if len(df) == 0:
+        if df is None or len(df) == 0:
             continue
 
         if period_name in ['today', 'yesterday', 'today_projected', 'yesterday_projected']:
@@ -457,25 +660,20 @@ def calculate_daily_statistics(data_dict):
                 except ValueError:
                     cutoff_idx = len([t for t in standard_times if t <= cutoff_time_str])
 
-                # Interpolate only up to cutoff, leave future as NaN
+                # Interpolate only up to cutoff
                 aligned_energy.iloc[:cutoff_idx] = aligned_energy.iloc[:cutoff_idx].interpolate()
                 aligned_percentage.iloc[:cutoff_idx] = aligned_percentage.iloc[:cutoff_idx].interpolate()
 
+                # Set future to NaN
                 aligned_energy.iloc[cutoff_idx:] = np.nan
                 aligned_percentage.iloc[cutoff_idx:] = np.nan
                 
-                # CRITICAL FIX: Fill NaN ONLY in the past (before cutoff), not in the future
-                # This prevents the line from dropping to 0 at the cutoff
+                # Fill past NaN
                 aligned_energy.iloc[:cutoff_idx] = aligned_energy.iloc[:cutoff_idx].fillna(0.1)
                 aligned_percentage.iloc[:cutoff_idx] = aligned_percentage.iloc[:cutoff_idx].fillna(0)
-                # Future values remain NaN and won't be plotted
             else:
-                aligned_energy = aligned_energy.interpolate()
-                aligned_percentage = aligned_percentage.interpolate()
-                
-                # For historical data, fill remaining NaN values
-                aligned_energy = aligned_energy.fillna(0.1)
-                aligned_percentage = aligned_percentage.fillna(0)
+                aligned_energy = aligned_energy.interpolate().fillna(0.1)
+                aligned_percentage = aligned_percentage.interpolate().fillna(0)
 
             stats[period_name] = {
                 'time_bins': standard_times,
@@ -486,24 +684,18 @@ def calculate_daily_statistics(data_dict):
             }
 
         else:
+            # Multi-day periods
             unique_dates = df['date'].unique()
-
             daily_energy_data = []
             daily_percentage_data = []
 
             for date in unique_dates:
                 day_data = df[df['date'] == date]
-
                 if len(day_data) > 0:
-                    time_indexed = day_data.set_index('time')
-                    time_indexed = time_indexed[['energy_production', 'energy_percentage']].groupby(
-                        time_indexed.index).mean()
-
-                    aligned_energy = time_indexed['energy_production'].reindex(standard_times).interpolate()
-                    aligned_percentage = time_indexed['energy_percentage'].reindex(standard_times).interpolate()
-
-                    aligned_energy = aligned_energy.fillna(0.1)
-                    aligned_percentage = aligned_percentage.fillna(0)
+                    time_indexed = day_data.set_index('time')[['energy_production', 'energy_percentage']].groupby(level=0).mean()
+                    
+                    aligned_energy = time_indexed['energy_production'].reindex(standard_times).interpolate().fillna(0.1)
+                    aligned_percentage = time_indexed['energy_percentage'].reindex(standard_times).interpolate().fillna(0)
 
                     daily_energy_data.append(aligned_energy.values)
                     daily_percentage_data.append(aligned_percentage.values)
@@ -523,29 +715,14 @@ def calculate_daily_statistics(data_dict):
     return stats
 
 
-def create_time_axis():
-    """
-    Create time axis for 15-minute bins
-    """
-    times = []
-    for hour in range(24):
-        for minute in [0, 15, 30, 45]:
-            times.append(f"{hour:02d}:{minute:02d}")
-    return times
-
-
 def plot_analysis(stats_data, source_type, output_file):
     """
     Create vertical plots - percentage on top, absolute below
-    UPDATED: Larger fonts and thicker lines for mobile viewing
     """
     if not stats_data:
         print("No data for plotting")
         return None
 
-    print("\nCreating plots...")
-
-    # VERTICAL LAYOUT: 2 rows, 1 column
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 20))
 
     colors = {
@@ -585,10 +762,9 @@ def plot_analysis(stats_data, source_type, output_file):
     fig.suptitle(source_name, fontsize=34, fontweight='bold', x=0.5, y=0.98, ha="center")
     ax1.set_title('Percentage of EU Production', fontsize=26, fontweight='normal', pad=10)
     ax1.set_xlabel('Time of Day (Brussels)', fontsize=28, fontweight='bold', labelpad=15)
-    ax1.set_ylabel('Percentage (%)', fontsize=28, fontweight='bold', labelpad=15)
+    ax1.set_ylabel('Energy production (%)', fontsize=28, fontweight='bold', labelpad=15)
 
     max_percentage = 0
-
     plot_order = ['week_ago', 'year_ago', 'two_years_ago', 'yesterday', 'today', 
                   'yesterday_projected', 'today_projected']
 
@@ -606,7 +782,6 @@ def plot_analysis(stats_data, source_type, output_file):
 
         x_values = np.arange(len(data['percentage_mean']))
         y_values = data['percentage_mean'].copy()
-
         max_percentage = max(max_percentage, np.nanmax(y_values))
 
         if period_name in ['today', 'today_projected']:
@@ -617,33 +792,24 @@ def plot_analysis(stats_data, source_type, output_file):
             else:
                 continue
 
-        # THICKER LINES
         ax1.plot(x_values, y_values, color=color, linestyle=linestyle, linewidth=6, label=label)
 
         if period_name in ['week_ago', 'year_ago', 'two_years_ago'] and 'percentage_std' in data:
-            std_values = data['percentage_std']
-            if period_name == 'today':
-                std_values = std_values[mask] if np.any(mask) else std_values
-
-            upper_bound = y_values + std_values[:len(x_values)]
-            lower_bound = y_values - std_values[:len(x_values)]
+            std_values = data['percentage_std'][:len(x_values)]
+            upper_bound = y_values + std_values
+            lower_bound = y_values - std_values
             max_percentage = max(max_percentage, np.nanmax(upper_bound))
-
             ax1.fill_between(x_values, lower_bound, upper_bound, color=color, alpha=0.2)
 
     ax1.grid(True, alpha=0.3, linewidth=1.5)
     ax1.tick_params(axis='both', labelsize=22)
     ax1.set_xlim(0, len(time_labels))
-
-    if max_percentage > 0:
-        ax1.set_ylim(0, max_percentage * 1.05)
-    else:
-        ax1.set_ylim(0, 50)
+    ax1.set_ylim(0, max_percentage * 1.05 if max_percentage > 0 else 50)
 
     # PLOT 2 (BOTTOM): ABSOLUTE VALUES
     ax2.set_title('Absolute Production', fontsize=26, fontweight='normal', pad=10)
     ax2.set_xlabel('Time of Day (Brussels)', fontsize=28, fontweight='bold', labelpad=15)
-    ax2.set_ylabel('Energy Production (MW)', fontsize=28, fontweight='bold', labelpad=15)
+    ax2.set_ylabel('Energy production (MW)', fontsize=28, fontweight='bold', labelpad=15)
 
     max_energy = 0
 
@@ -661,7 +827,6 @@ def plot_analysis(stats_data, source_type, output_file):
 
         x_values = np.arange(len(data['energy_mean']))
         y_values = data['energy_mean'].copy()
-
         max_energy = max(max_energy, np.nanmax(y_values))
 
         if period_name in ['today', 'today_projected']:
@@ -672,18 +837,13 @@ def plot_analysis(stats_data, source_type, output_file):
             else:
                 continue
 
-        # THICKER LINES
         ax2.plot(x_values, y_values, color=color, linestyle=linestyle, linewidth=6, label=label)
 
         if period_name in ['week_ago', 'year_ago', 'two_years_ago'] and 'energy_std' in data:
-            std_values = data['energy_std']
-            if period_name == 'today':
-                std_values = std_values[mask] if np.any(mask) else std_values
-
-            upper_bound = y_values + std_values[:len(x_values)]
-            lower_bound = y_values - std_values[:len(x_values)]
+            std_values = data['energy_std'][:len(x_values)]
+            upper_bound = y_values + std_values
+            lower_bound = y_values - std_values
             max_energy = max(max_energy, np.nanmax(upper_bound))
-
             ax2.fill_between(x_values, lower_bound, upper_bound, color=color, alpha=0.2)
 
     ax2.grid(True, alpha=0.3, linewidth=1.5)
@@ -691,40 +851,58 @@ def plot_analysis(stats_data, source_type, output_file):
     ax2.set_xlim(0, len(time_labels))
     ax2.set_ylim(0, max_energy * 1.05)
 
-    # X-axis ticks for both plots
+    # X-axis ticks
     tick_positions = np.arange(0, len(time_labels), 8)
     for ax in [ax1, ax2]:
         ax.set_xticks(tick_positions)
         ax.set_xticklabels([time_labels[i] for i in tick_positions], rotation=45)
 
-    # Legend below plots - LARGER FONT, positioned lower to avoid overlap
+    # Legend
     handles1, labels1 = ax1.get_legend_handles_labels()
     fig.legend(handles1, labels1, loc='lower center', bbox_to_anchor=(0.5, -0.05),
                ncol=3, fontsize=20, frameon=False, columnspacing=1.5)
 
     plt.tight_layout(rect=[0, 0.05, 1, 0.985])
-
     plt.savefig(output_file, dpi=150, bbox_inches='tight')
-    print(f"Saved plot to {output_file}")
     plt.close()
 
     return output_file
 
 
+def generate_plot_for_source(source_type, corrected_data, output_file):
+    """
+    Phase 3: Generate plot for a specific source from corrected data
+    """
+    print(f"\n" + "=" * 80)
+    print(f"PHASE 3: PLOT GENERATION - {DISPLAY_NAMES[source_type].upper()}")
+    print("=" * 80)
+    
+    # Convert corrected data to plot format
+    plot_data = convert_corrected_data_to_plot_format(source_type, corrected_data)
+    
+    if not plot_data:
+        print(f"✗ No data available for {source_type}")
+        return
+    
+    # Calculate statistics
+    stats_data = calculate_daily_statistics(plot_data)
+    
+    # Create plot
+    plot_analysis(stats_data, source_type, output_file)
+    
+    print(f"✓ Plot saved to {output_file}")
+
+
 def main():
     """
-    Main function
+    Main function - orchestrates the 3 phases
     """
-    parser = argparse.ArgumentParser(description='EU Energy Intraday Analysis')
-    parser.add_argument('--source', required=True, 
-                       choices=list(SOURCE_KEYWORDS.keys()),
+    parser = argparse.ArgumentParser(description='EU Energy Intraday Analysis v2')
+    parser.add_argument('--source', required=True,
+                       choices=ATOMIC_SOURCES + AGGREGATE_SOURCES,
                        help='Energy source to analyze')
     
     args = parser.parse_args()
-    
-    print("=" * 60)
-    print(f"{DISPLAY_NAMES[args.source].upper()} INTRADAY ANALYSIS")
-    print("=" * 60)
     
     # Get API key
     api_key = os.environ.get('ENTSOE_API_KEY')
@@ -733,26 +911,24 @@ def main():
         sys.exit(1)
     
     try:
-        # Load data
-        raw_data = load_intraday_data(args.source, api_key)
+        # Phase 1: Collect all data
+        data_matrix, periods = collect_all_data(api_key)
         
-        if not raw_data:
-            print(f"✗ No data")
-            sys.exit(1)
+        # Phase 2: Apply projections and corrections
+        corrected_data = apply_projections_and_corrections(data_matrix)
         
-        # Calculate statistics
-        stats_data = calculate_daily_statistics(raw_data)
-        
-        # Create plot
+        # Phase 3: Generate plot for requested source
         output_file = f'plots/{args.source.replace("-", "_")}_analysis.png'
-        plot_analysis(stats_data, args.source, output_file)
+        generate_plot_for_source(args.source, corrected_data, output_file)
         
         # Create timestamp file
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')
         with open('plots/last_update.html', 'w') as f:
             f.write(f'<p>Last updated: {timestamp}</p>')
         
-        print(f"\n✓ COMPLETE! Plot saved to {output_file}")
+        print(f"\n" + "=" * 80)
+        print(f"✓ COMPLETE! Plot saved to {output_file}")
+        print("=" * 80)
         
     except Exception as e:
         print(f"✗ Error: {e}")
