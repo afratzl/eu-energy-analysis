@@ -44,11 +44,9 @@ jobs:
         run: |
           echo "Running hourly intraday analysis..."
           
-          # Run intraday analysis for all 12 sources
-          for source in solar wind hydro biomass geothermal gas coal nuclear oil waste all-renewables all-non-renewables; do
-            echo "Analyzing $source..."
-            python scripts/intraday_analysis.py --source $source || echo "Failed to analyze $source"
-          done
+          # Run intraday analysis - generates all 12 sources in one run
+          echo "Generating all intraday plots..."
+          python scripts/intraday_analysis.py || echo "Failed to generate intraday plots"
       
       # DAILY JOB: Historical Data Collection and Plotting (runs at 3 AM)
       - name: Run Historical Data Collection and Plotting (Daily)
