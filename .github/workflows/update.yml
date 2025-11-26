@@ -38,7 +38,9 @@ jobs:
       
       # HOURLY JOB: Intraday Analysis (runs every hour)
       - name: Run Intraday Analysis (Hourly)
-        if: github.event.schedule != '0 3 * * *'
+        if: |
+          github.event.schedule == '5 * * * *' || 
+          github.event_name == 'workflow_dispatch'
         env:
           ENTSOE_API_KEY: ${{ secrets.ENTSOE_API_KEY }}
         run: |
@@ -50,7 +52,9 @@ jobs:
       
       # DAILY JOB: Historical Data Collection and Plotting (runs at 3 AM)
       - name: Run Historical Data Collection and Plotting (Daily)
-        if: github.event.schedule == '0 3 * * *'
+        if: |
+          github.event.schedule == '0 3 * * *' || 
+          github.event_name == 'workflow_dispatch'
         env:
           ENTSOE_API_KEY: ${{ secrets.ENTSOE_API_KEY }}
           GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
