@@ -1085,12 +1085,55 @@ def update_summary_table_historical_data(all_data):
                 'avg_2020_2024_gwh': avg_2020_2024_gwh
             }
         
-        # Calculate aggregates by summing individual sources
-        renewables_ytd = sum(source_calcs[s]['ytd_2025_gwh'] for s in renewables if s in source_calcs)
-        renewables_avg = sum(source_calcs[s]['avg_2020_2024_gwh'] for s in renewables if s in source_calcs)
+        # Calculate aggregates: Use "All Renewables" from sheets if it exists, 
+        # otherwise sum individual sources
+        if 'All Renewables' in all_data:
+            # Read directly from Google Sheets
+            renewables_year_data = all_data['All Renewables']['year_data']
+            
+            renewables_ytd = 0
+            if 2025 in renewables_year_data:
+                for month in range(1, current_month + 1):
+                    renewables_ytd += renewables_year_data[2025].get(month, 0)
+            
+            period_totals = []
+            for year in range(2020, 2025):
+                if year in renewables_year_data:
+                    year_total = sum(renewables_year_data[year].values())
+                    period_totals.append(year_total)
+            
+            renewables_avg = sum(period_totals) / len(period_totals) if period_totals else 0
+        else:
+            # Fallback: sum individual sources
+            renewables_ytd = sum(source_calcs[s]['ytd_2025_gwh'] for s in renewables if s in source_calcs)
+            renewables_avg = sum(source_calcs[s]['avg_2020_2024_gwh'] for s in renewables if s in source_calcs)
         
-        non_renewables_ytd = sum(source_calcs[s]['ytd_2025_gwh'] for s in non_renewables if s in source_calcs)
-        non_renewables_avg = sum(source_calcs[s]['avg_2020_2024_gwh'] for s in non_renewables if s in source_calcs)
+        # Calculate All Non-Renewables from Total Generation - All Renewables
+        # This ensures they sum to exactly 100%
+        if 'Total Generation' in all_data:
+            total_year_data = all_data['Total Generation']['year_data']
+            
+            # YTD 2025 total
+            total_ytd = 0
+            if 2025 in total_year_data:
+                for month in range(1, current_month + 1):
+                    total_ytd += total_year_data[2025].get(month, 0)
+            
+            non_renewables_ytd = total_ytd - renewables_ytd
+            
+            # 2020-2024 average total
+            period_totals = []
+            for year in range(2020, 2025):
+                if year in total_year_data:
+                    year_total = sum(total_year_data[year].values())
+                    period_totals.append(year_total)
+            
+            total_avg = sum(period_totals) / len(period_totals) if period_totals else 0
+            non_renewables_avg = total_avg - renewables_avg
+        else:
+            # Fallback: sum individual sources
+            non_renewables_ytd = sum(source_calcs[s]['ytd_2025_gwh'] for s in non_renewables if s in source_calcs)
+            non_renewables_avg = sum(source_calcs[s]['avg_2020_2024_gwh'] for s in non_renewables if s in source_calcs)
         
         source_calcs['All Renewables'] = {
             'ytd_2025_gwh': renewables_ytd,
