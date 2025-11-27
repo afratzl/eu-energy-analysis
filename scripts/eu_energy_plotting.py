@@ -47,7 +47,7 @@ def load_data_from_google_sheets():
         credentials = Credentials.from_service_account_info(creds_dict, scopes=scope)
         gc = gspread.authorize(credentials)
 
-        spreadsheet = gc.open('EU Energy Production Data')
+        spreadsheet = gc.open('EU Electricity Production Data')
         print(f"✓ Connected to Google Sheets: {spreadsheet.url}")
 
         worksheets = spreadsheet.worksheets()
@@ -228,7 +228,7 @@ def create_all_charts(all_data):
         fig1.suptitle(source_name, fontsize=34, fontweight='bold', x=0.5, y=0.98, ha="center")
         ax1.set_title('Percentage of EU Production', fontsize=26, fontweight='normal', pad=15)
         ax1.set_xlabel('Month', fontsize=28, fontweight='bold', labelpad=15)
-        ax1.set_ylabel('Energy production (%)', fontsize=28, fontweight='bold', labelpad=15)
+        ax1.set_ylabel('Electricity production (%)', fontsize=28, fontweight='bold', labelpad=15)
         
         # NO RESTRICTION - let it scale to data
         ax1.set_ylim(0, max_pct_value * 1.1 if max_pct_value > 0 else 10)
@@ -278,7 +278,7 @@ def create_all_charts(all_data):
         fig2.suptitle(source_name, fontsize=34, fontweight='bold', x=0.5, y=0.98, ha="center")
         ax2.set_title('Absolute Production', fontsize=26, fontweight='normal', pad=15)
         ax2.set_xlabel('Month', fontsize=28, fontweight='bold', labelpad=15)
-        ax2.set_ylabel('Energy production (TWh)', fontsize=28, fontweight='bold', labelpad=15)
+        ax2.set_ylabel('Electricity production (TWh)', fontsize=28, fontweight='bold', labelpad=15)
         
         # NO RESTRICTION - let it scale to data
         ax2.set_ylim(0, max_abs_value * 1.1 if max_abs_value > 0 else 10)
@@ -414,25 +414,25 @@ def create_all_charts(all_data):
                          linewidth=6, markersize=13, label=source_name)
 
             # Bold main title above top subplot
-            fig.text(0.5, 0.98, f'All Energy Sources: {period["name"]}', 
+            fig.text(0.5, 0.98, f'All Electricity Sources: {period["name"]}', 
                     ha='center', fontsize=34, fontweight='bold')
             
             # Subtitle for top plot
-            ax1.set_title('Percentage of EU Production', fontsize=26, fontweight='normal', pad=20)
+            ax1.set_title('Percentage of EU Production', fontsize=26, fontweight='normal', pad=35)
             ax1.set_xlabel('Month', fontsize=28, fontweight='bold', labelpad=15)
-            ax1.set_ylabel('Energy production (%)', fontsize=28, fontweight='bold', labelpad=15)
+            ax1.set_ylabel('Electricity production (%)', fontsize=28, fontweight='bold', labelpad=15)
             ax1.set_ylim(0, max_pct_all_periods)
             ax1.tick_params(axis='both', labelsize=22)
             ax1.grid(True, linestyle='--', alpha=0.7)
 
             # Bold main title above bottom subplot  
-            fig.text(0.5, 0.47, f'All Energy Sources: {period["name"]}', 
+            fig.text(0.5, 0.47, f'All Electricity Sources: {period["name"]}', 
                     ha='center', fontsize=34, fontweight='bold')
             
             # Subtitle for bottom plot
-            ax2.set_title('Absolute Production', fontsize=26, fontweight='normal', pad=20)
+            ax2.set_title('Absolute Production', fontsize=26, fontweight='normal', pad=35)
             ax2.set_xlabel('Month', fontsize=28, fontweight='bold', labelpad=15)
-            ax2.set_ylabel('Energy production (TWh)', fontsize=28, fontweight='bold', labelpad=15)
+            ax2.set_ylabel('Electricity production (TWh)', fontsize=28, fontweight='bold', labelpad=15)
             ax2.set_ylim(0, max_abs_all_periods)
             ax2.tick_params(axis='both', labelsize=22)
             ax2.grid(True, linestyle='--', alpha=0.7)
@@ -555,9 +555,9 @@ def create_all_charts(all_data):
                     ha='center', fontsize=34, fontweight='bold')
             
             # Subtitle for top plot
-            ax1.set_title('Percentage of EU Production', fontsize=26, fontweight='normal', pad=20)
+            ax1.set_title('Percentage of EU Production', fontsize=26, fontweight='normal', pad=35)
             ax1.set_xlabel('Month', fontsize=28, fontweight='bold', labelpad=15)
-            ax1.set_ylabel('Energy production (%)', fontsize=28, fontweight='bold', labelpad=15)
+            ax1.set_ylabel('Electricity production (%)', fontsize=28, fontweight='bold', labelpad=15)
             ax1.set_ylim(0, 100)
             ax1.tick_params(axis='both', labelsize=22)
             ax1.grid(True, linestyle='--', alpha=0.7)
@@ -567,9 +567,9 @@ def create_all_charts(all_data):
                     ha='center', fontsize=34, fontweight='bold')
             
             # Subtitle for bottom plot
-            ax2.set_title('Absolute Production', fontsize=26, fontweight='normal', pad=20)
+            ax2.set_title('Absolute Production', fontsize=26, fontweight='normal', pad=35)
             ax2.set_xlabel('Month', fontsize=28, fontweight='bold', labelpad=15)
-            ax2.set_ylabel('Energy production (TWh)', fontsize=28, fontweight='bold', labelpad=15)
+            ax2.set_ylabel('Electricity production (TWh)', fontsize=28, fontweight='bold', labelpad=15)
             ax2.set_ylim(0, max_abs_renewable_periods)
             ax2.tick_params(axis='both', labelsize=22)
             ax2.grid(True, linestyle='--', alpha=0.7)
@@ -693,9 +693,9 @@ def create_all_charts(all_data):
                     ha='center', fontsize=34, fontweight='bold')
             
             # Subtitle for top plot
-            ax1.set_title('Percentage of EU Production', fontsize=26, fontweight='normal', pad=20)
+            ax1.set_title('Percentage of EU Production', fontsize=26, fontweight='normal', pad=35)
             ax1.set_xlabel('Year', fontsize=28, fontweight='bold', labelpad=15)
-            ax1.set_ylabel('Energy production (%)', fontsize=28, fontweight='bold', labelpad=15)
+            ax1.set_ylabel('Electricity production (%)', fontsize=28, fontweight='bold', labelpad=15)
             ax1.set_ylim(0, max_annual_pct)
             ax1.tick_params(axis='both', labelsize=22)
             ax1.grid(True, linestyle='--', alpha=0.7)
@@ -705,9 +705,9 @@ def create_all_charts(all_data):
                     ha='center', fontsize=34, fontweight='bold')
             
             # Subtitle for bottom plot
-            ax2.set_title('Absolute Production', fontsize=26, fontweight='normal', pad=20)
+            ax2.set_title('Absolute Production', fontsize=26, fontweight='normal', pad=35)
             ax2.set_xlabel('Year', fontsize=28, fontweight='bold', labelpad=15)
-            ax2.set_ylabel('Energy production (TWh)', fontsize=28, fontweight='bold', labelpad=15)
+            ax2.set_ylabel('Electricity production (TWh)', fontsize=28, fontweight='bold', labelpad=15)
             ax2.set_ylim(0, max_annual_twh)
             ax2.tick_params(axis='both', labelsize=22)
             ax2.grid(True, linestyle='--', alpha=0.7)
@@ -775,9 +775,9 @@ def create_all_charts(all_data):
                     ha='center', fontsize=34, fontweight='bold')
             
             # Subtitle for top plot
-            ax1.set_title('Percentage of EU Production', fontsize=26, fontweight='normal', pad=20)
+            ax1.set_title('Percentage of EU Production', fontsize=26, fontweight='normal', pad=35)
             ax1.set_xlabel('Year', fontsize=28, fontweight='bold', labelpad=15)
-            ax1.set_ylabel('Energy production (%)', fontsize=28, fontweight='bold', labelpad=15)
+            ax1.set_ylabel('Electricity production (%)', fontsize=28, fontweight='bold', labelpad=15)
             ax1.set_ylim(0, max_annual_pct)
             ax1.tick_params(axis='both', labelsize=22)
             ax1.grid(True, linestyle='--', alpha=0.7)
@@ -787,9 +787,9 @@ def create_all_charts(all_data):
                     ha='center', fontsize=34, fontweight='bold')
             
             # Subtitle for bottom plot
-            ax2.set_title('Absolute Production', fontsize=26, fontweight='normal', pad=20)
+            ax2.set_title('Absolute Production', fontsize=26, fontweight='normal', pad=35)
             ax2.set_xlabel('Year', fontsize=28, fontweight='bold', labelpad=15)
-            ax2.set_ylabel('Energy production (TWh)', fontsize=28, fontweight='bold', labelpad=15)
+            ax2.set_ylabel('Electricity production (TWh)', fontsize=28, fontweight='bold', labelpad=15)
             ax2.set_ylim(0, max_annual_twh)
             ax2.tick_params(axis='both', labelsize=22)
             ax2.grid(True, linestyle='--', alpha=0.7)
@@ -857,9 +857,9 @@ def create_all_charts(all_data):
                     ha='center', fontsize=34, fontweight='bold')
             
             # Subtitle for top plot
-            ax1.set_title('Percentage of EU Production', fontsize=26, fontweight='normal', pad=20)
+            ax1.set_title('Percentage of EU Production', fontsize=26, fontweight='normal', pad=35)
             ax1.set_xlabel('Year', fontsize=28, fontweight='bold', labelpad=15)
-            ax1.set_ylabel('Energy production (%)', fontsize=28, fontweight='bold', labelpad=15)
+            ax1.set_ylabel('Electricity production (%)', fontsize=28, fontweight='bold', labelpad=15)
             ax1.set_ylim(0, 100)
             ax1.tick_params(axis='both', labelsize=22)
             ax1.grid(True, linestyle='--', alpha=0.7)
@@ -869,9 +869,9 @@ def create_all_charts(all_data):
                     ha='center', fontsize=34, fontweight='bold')
             
             # Subtitle for bottom plot
-            ax2.set_title('Absolute Production', fontsize=26, fontweight='normal', pad=20)
+            ax2.set_title('Absolute Production', fontsize=26, fontweight='normal', pad=35)
             ax2.set_xlabel('Year', fontsize=28, fontweight='bold', labelpad=15)
-            ax2.set_ylabel('Energy production (TWh)', fontsize=28, fontweight='bold', labelpad=15)
+            ax2.set_ylabel('Electricity production (TWh)', fontsize=28, fontweight='bold', labelpad=15)
             ax2.set_ylim(bottom=0)
             ax2.tick_params(axis='both', labelsize=22)
             ax2.grid(True, linestyle='--', alpha=0.7)
@@ -974,7 +974,7 @@ def create_all_charts(all_data):
                     ha='center', fontsize=34, fontweight='bold')
             
             # Subtitle for top plot
-            ax1.set_title('All Energy Sources', fontsize=26, fontweight='normal', pad=20)
+            ax1.set_title('All Electricity Sources', fontsize=26, fontweight='normal', pad=35)
             ax1.set_xlabel('Year', fontsize=28, fontweight='bold', labelpad=15)
             ax1.set_ylabel('% Change from 2015', fontsize=28, fontweight='bold', labelpad=15)
             ax1.set_ylim(y_min_limit, y_max_limit)
@@ -987,7 +987,7 @@ def create_all_charts(all_data):
                     ha='center', fontsize=34, fontweight='bold')
             
             # Subtitle for bottom plot
-            ax2.set_title('Renewables vs Non-Renewables', fontsize=26, fontweight='normal', pad=20)
+            ax2.set_title('Renewables vs Non-Renewables', fontsize=26, fontweight='normal', pad=35)
             ax2.set_xlabel('Year', fontsize=28, fontweight='bold', labelpad=15)
             ax2.set_ylabel('% Change from 2015', fontsize=28, fontweight='bold', labelpad=15)
             ax2.set_ylim(y_min_limit, y_max_limit)
@@ -1035,7 +1035,7 @@ def update_summary_table_historical_data(all_data):
         credentials = Credentials.from_service_account_info(creds_dict, scopes=scope)
         gc = gspread.authorize(credentials)
         
-        spreadsheet = gc.open('EU Energy Production Data')
+        spreadsheet = gc.open('EU Electricity Production Data')
         print("✓ Connected to spreadsheet")
         
         # Get the Summary Table Data worksheet
