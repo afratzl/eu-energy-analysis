@@ -1064,7 +1064,7 @@ def update_summary_table_worksheet(corrected_data):
             print("⚠ Insufficient data to update summary table")
             return
         
-        # Prepare data rows
+        # Prepare data rows - ONLY columns that intraday owns
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M UTC')
         
         # Order: Aggregates first, then individual sources
@@ -1075,38 +1075,44 @@ def update_summary_table_worksheet(corrected_data):
             'gas', 'coal', 'nuclear', 'oil', 'waste'
         ]
         
-        rows = []
+        # First, update column A (Source names) if needed
+        source_names = []
+        for source in source_order:
+            display_name = DISPLAY_NAMES.get(source, source.title())
+            source_names.append([display_name])
+        
+        worksheet.update('A2:A13', source_names)
+        
+        # Now update ONLY the columns intraday owns: B-E (Yesterday, Last Week)
+        data_updates = []
         for source in source_order:
             if source not in yesterday_totals or source not in week_totals:
+                data_updates.append(['', '', '', ''])
                 continue
             
-            # Convert source name to display format
-            display_name = DISPLAY_NAMES.get(source, source.title())
-            
             row = [
-                display_name,
-                f"{yesterday_totals[source]['gwh']:.1f}",
-                f"{yesterday_totals[source]['percentage']:.2f}",
-                f"{week_totals[source]['gwh']:.1f}",
-                f"{week_totals[source]['percentage']:.2f}",
-                '',  # YTD2025 - filled by plotting script
-                '',  # YTD2025% - filled by plotting script
-                '',  # Avg2020-2024 - filled by plotting script
-                '',  # Avg2020-2024% - filled by plotting script
-                timestamp
+                f"{yesterday_totals[source]['gwh']:.1f}",      # B: Yesterday_GWh
+                f"{yesterday_totals[source]['percentage']:.2f}",  # C: Yesterday_%
+                f"{week_totals[source]['gwh']:.1f}",           # D: LastWeek_GWh
+                f"{week_totals[source]['percentage']:.2f}"     # E: LastWeek_%
+                # DO NOT update F-I (YTD and Historical) - those belong to plotting script!
             ]
-            rows.append(row)
+            data_updates.append(row)
         
-        # Update worksheet (starting from row 2, after headers)
-        if rows:
-            cell_range = f'A2:J{len(rows) + 1}'
-            worksheet.update(cell_range, rows)
+        # Update columns B-E only (preserves F-I historical data!)
+        if data_updates:
+            worksheet.update('B2:E13', data_updates)
+            
+            # Update timestamp in column J
+            timestamp_updates = [[timestamp]] * len(source_order)
+            worksheet.update('J2:J13', timestamp_updates)
             
             # Format aggregate rows (bold)
             worksheet.format('A2:J2', {'textFormat': {'bold': True}})  # All Renewables
             worksheet.format('A8:J8', {'textFormat': {'bold': True}})  # All Non-Renewables
             
-            print(f"✓ Updated {len(rows)} sources with yesterday/last week data")
+            print(f"✓ Updated {len(source_order)} sources with yesterday/last week data (columns B-E)")
+            print(f"   Historical data (columns F-I) preserved!")
             print(f"   Worksheet: {spreadsheet.url}")
         else:
             print("⚠ No data to update")
