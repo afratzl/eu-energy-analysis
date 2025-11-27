@@ -1069,13 +1069,19 @@ def update_summary_table_historical_data(all_data):
             ytd_2025_gwh = 0
             if 2025 in year_data:
                 for month in range(1, current_month + 1):
-                    ytd_2025_gwh += year_data[2025].get(month, 0)
+                    month_value = year_data[2025].get(month, 0)
+                    days_in_month = calendar.monthrange(2025, month)[1]
+                    ytd_2025_gwh += month_value * days_in_month  # Convert daily average to monthly total
             
             # Calculate 2020-2024 average (annual)
             period_totals = []
             for year in range(2020, 2025):
                 if year in year_data:
-                    year_total = sum(year_data[year].values())
+                    year_total = 0
+                    for month in range(1, 13):
+                        month_value = year_data[year].get(month, 0)
+                        days_in_month = calendar.monthrange(year, month)[1]
+                        year_total += month_value * days_in_month  # Convert daily average to monthly total
                     period_totals.append(year_total)
             
             avg_2020_2024_gwh = sum(period_totals) / len(period_totals) if period_totals else 0
@@ -1094,12 +1100,18 @@ def update_summary_table_historical_data(all_data):
             renewables_ytd = 0
             if 2025 in renewables_year_data:
                 for month in range(1, current_month + 1):
-                    renewables_ytd += renewables_year_data[2025].get(month, 0)
+                    month_value = renewables_year_data[2025].get(month, 0)
+                    days_in_month = calendar.monthrange(2025, month)[1]
+                    renewables_ytd += month_value * days_in_month  # Convert daily average to monthly total
             
             period_totals = []
             for year in range(2020, 2025):
                 if year in renewables_year_data:
-                    year_total = sum(renewables_year_data[year].values())
+                    year_total = 0
+                    for month in range(1, 13):
+                        month_value = renewables_year_data[year].get(month, 0)
+                        days_in_month = calendar.monthrange(year, month)[1]
+                        year_total += month_value * days_in_month  # Convert daily average to monthly total
                     period_totals.append(year_total)
             
             renewables_avg = sum(period_totals) / len(period_totals) if period_totals else 0
@@ -1117,7 +1129,9 @@ def update_summary_table_historical_data(all_data):
             total_ytd = 0
             if 2025 in total_year_data:
                 for month in range(1, current_month + 1):
-                    total_ytd += total_year_data[2025].get(month, 0)
+                    month_value = total_year_data[2025].get(month, 0)
+                    days_in_month = calendar.monthrange(2025, month)[1]
+                    total_ytd += month_value * days_in_month  # Convert daily average to monthly total
             
             non_renewables_ytd = total_ytd - renewables_ytd
             
@@ -1125,7 +1139,11 @@ def update_summary_table_historical_data(all_data):
             period_totals = []
             for year in range(2020, 2025):
                 if year in total_year_data:
-                    year_total = sum(total_year_data[year].values())
+                    year_total = 0
+                    for month in range(1, 13):
+                        month_value = total_year_data[year].get(month, 0)
+                        days_in_month = calendar.monthrange(year, month)[1]
+                        year_total += month_value * days_in_month  # Convert daily average to monthly total
                     period_totals.append(year_total)
             
             total_avg = sum(period_totals) / len(period_totals) if period_totals else 0
@@ -1174,7 +1192,9 @@ def update_summary_table_historical_data(all_data):
                 ytd_2025_total = 0
                 if 2025 in total_year_data:
                     for month in range(1, current_month + 1):
-                        ytd_2025_total += total_year_data[2025].get(month, 0)
+                        month_value = total_year_data[2025].get(month, 0)
+                        days_in_month = calendar.monthrange(2025, month)[1]
+                        ytd_2025_total += month_value * days_in_month  # Convert daily average to monthly total
                 
                 ytd_2025_pct = (ytd_2025_gwh / ytd_2025_total * 100) if ytd_2025_total > 0 else 0
                 
@@ -1182,7 +1202,11 @@ def update_summary_table_historical_data(all_data):
                 period_total_gen = []
                 for year in range(2020, 2025):
                     if year in total_year_data:
-                        year_total_gen = sum(total_year_data[year].values())
+                        year_total_gen = 0
+                        for month in range(1, 13):
+                            month_value = total_year_data[year].get(month, 0)
+                            days_in_month = calendar.monthrange(year, month)[1]
+                            year_total_gen += month_value * days_in_month  # Convert daily average to monthly total
                         period_total_gen.append(year_total_gen)
                 
                 avg_total_gen = sum(period_total_gen) / len(period_total_gen) if period_total_gen else 0
