@@ -807,7 +807,7 @@ def plot_analysis(stats_data, source_type, output_file):
     fig.suptitle(source_name, fontsize=34, fontweight='bold', x=0.5, y=0.98, ha="center")
     ax1.set_title('Percentage of EU Production', fontsize=26, fontweight='normal', pad=10)
     ax1.set_xlabel('Time of Day (Brussels)', fontsize=28, fontweight='bold', labelpad=15)
-    ax1.set_ylabel('Energy production (%)', fontsize=28, fontweight='bold', labelpad=15)
+    ax1.set_ylabel('Electricity production (%)', fontsize=28, fontweight='bold', labelpad=15)
 
     max_percentage = 0
     plot_order = ['week_ago', 'year_ago', 'two_years_ago', 'yesterday', 'today', 
@@ -854,7 +854,7 @@ def plot_analysis(stats_data, source_type, output_file):
     # PLOT 2 (BOTTOM): ABSOLUTE VALUES
     ax2.set_title('Absolute Production', fontsize=26, fontweight='normal', pad=10)
     ax2.set_xlabel('Time of Day (Brussels)', fontsize=28, fontweight='bold', labelpad=15)
-    ax2.set_ylabel('Energy production (MW)', fontsize=28, fontweight='bold', labelpad=15)
+    ax2.set_ylabel('Electricity production (MW)', fontsize=28, fontweight='bold', labelpad=15)
 
     max_energy = 0
 
@@ -1025,7 +1025,7 @@ def update_summary_table_worksheet(corrected_data):
         gc = gspread.authorize(credentials)
         
         # Open spreadsheet
-        spreadsheet = gc.open('EU Energy Production Data')
+        spreadsheet = gc.open('EU Electricity Production Data')
         print("✓ Connected to spreadsheet")
         
         # Get or create worksheet
