@@ -67,6 +67,26 @@
             </div>
         </section>
 
+        <!-- Energy Mix Summary Table -->
+        <section class="summary-table-section">
+            <h2>Energy Mix Summary</h2>
+            <p class="section-subtitle">Production by source across different time periods</p>
+            
+            <div class="table-controls">
+                <span class="control-label">View:</span>
+                <button id="toggle-percentage" class="toggle-btn active" onclick="showPercentage()">
+                    Percentage %
+                </button>
+                <button id="toggle-absolute" class="toggle-btn" onclick="showAbsolute()">
+                    Absolute (TWh)
+                </button>
+            </div>
+
+            <div id="summary-table-container">
+                <div class="loading-message">Loading summary data...</div>
+            </div>
+        </section>
+
         <!-- Energy Transition Overview Section -->
         <section class="overview-section">
             <h2>Europe's Energy Transition</h2>
@@ -217,10 +237,113 @@
             document.getElementById('yesterday-summary').innerHTML = html;
         }
 
+        // Load and display summary table
+        function loadSummaryTable() {
+            fetch('plots/energy_summary_table.json')
+                .then(response => response.json())
+                .then(data => {
+                    displaySummaryTable(data);
+                })
+                .catch(error => {
+                    console.error('Error loading summary table:', error);
+                    document.getElementById('summary-table-container').innerHTML = 
+                        '<div class="error-message">Summary table not yet available. Data will appear after first update.</div>';
+                });
+        }
+
+        // Display summary table
+        function displaySummaryTable(data) {
+            let html = '<table class="summary-table">';
+            
+            // Header
+            html += `
+                <thead>
+                    <tr>
+                        <th>Source</th>
+                        <th>Yesterday</th>
+                        <th>Last Week</th>
+                        <th>2025 YTD</th>
+                        <th>2020-2024</th>
+                    </tr>
+                </thead>
+                <tbody>
+            `;
+            
+            // Data rows
+            data.sources.forEach(source => {
+                const isAggregate = source.category.startsWith('aggregate');
+                const isRenewable = source.category.includes('renewable');
+                const rowClass = isAggregate ? 'row-aggregate' : 'row-source';
+                const categoryClass = isRenewable ? 'renewable' : 'non-renewable';
+                
+                html += `<tr class="${rowClass} ${categoryClass}">`;
+                html += `<td class="source-name-cell">${source.source}</td>`;
+                
+                // Yesterday
+                html += `<td>
+                    <span class="value-pct">${source.yesterday.percentage}%</span>
+                    <span class="value-abs" style="display:none">${source.yesterday.twh} TWh</span>
+                </td>`;
+                
+                // Last Week
+                html += `<td>
+                    <span class="value-pct">${source.last_week.percentage}%</span>
+                    <span class="value-abs" style="display:none">${source.last_week.twh} TWh</span>
+                </td>`;
+                
+                // YTD 2025
+                html += `<td>
+                    <span class="value-pct">${source.ytd_2025.percentage}%</span>
+                    <span class="value-abs" style="display:none">${source.ytd_2025.twh} TWh</span>
+                </td>`;
+                
+                // 2020-2024 Avg
+                html += `<td>
+                    <span class="value-pct">${source.avg_2020_2024.percentage}%</span>
+                    <span class="value-abs" style="display:none">${source.avg_2020_2024.twh} TWh</span>
+                </td>`;
+                
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table>';
+            html += `<div class="table-footer">Last updated: ${data.last_updated}</div>`;
+            
+            document.getElementById('summary-table-container').innerHTML = html;
+        }
+
+        // Toggle functions
+        function showPercentage() {
+            document.querySelectorAll('.value-pct').forEach(el => el.style.display = 'inline');
+            document.querySelectorAll('.value-abs').forEach(el => el.style.display = 'none');
+            
+            document.getElementById('toggle-percentage').classList.add('active');
+            document.getElementById('toggle-absolute').classList.remove('active');
+            
+            localStorage.setItem('energyView', 'percentage');
+        }
+
+        function showAbsolute() {
+            document.querySelectorAll('.value-pct').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.value-abs').forEach(el => el.style.display = 'inline');
+            
+            document.getElementById('toggle-percentage').classList.remove('active');
+            document.getElementById('toggle-absolute').classList.add('active');
+            
+            localStorage.setItem('energyView', 'absolute');
+        }
+
         // Load on page load
         window.addEventListener('DOMContentLoaded', () => {
             loadTimestamp();
             loadYesterdaySummary();
+            loadSummaryTable();
+            
+            // Restore user's preference
+            const preference = localStorage.getItem('energyView') || 'percentage';
+            if (preference === 'absolute') {
+                showAbsolute();
+            }
         });
     </script>
 
@@ -509,6 +632,125 @@
             background: linear-gradient(90deg, #e74c3c, #c0392b);
         }
 
+        /* Summary Table Styles */
+        .summary-table-section {
+            margin: 60px 0;
+        }
+
+        .summary-table-section h2 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .table-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .control-label {
+            font-weight: 600;
+            color: #5a6c7d;
+        }
+
+        .toggle-btn {
+            padding: 10px 24px;
+            border: 2px solid #ddd;
+            background: white;
+            color: #5a6c7d;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-btn:hover {
+            background: #f0f0f0;
+        }
+
+        .toggle-btn.active {
+            background: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .summary-table thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .summary-table th {
+            padding: 18px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 1.05em;
+        }
+
+        .summary-table td {
+            padding: 14px 18px;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .row-aggregate {
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+
+        .row-aggregate.renewable {
+            background: linear-gradient(to right, rgba(39, 174, 96, 0.1), transparent);
+            border-top: 2px solid rgba(39, 174, 96, 0.3);
+            border-bottom: 2px solid rgba(39, 174, 96, 0.3);
+        }
+
+        .row-aggregate.non-renewable {
+            background: linear-gradient(to right, rgba(231, 76, 60, 0.1), transparent);
+            border-top: 2px solid rgba(231, 76, 60, 0.3);
+            border-bottom: 2px solid rgba(231, 76, 60, 0.3);
+        }
+
+        .row-source.renewable {
+            background: rgba(39, 174, 96, 0.02);
+        }
+
+        .row-source.non-renewable {
+            background: rgba(231, 76, 60, 0.02);
+        }
+
+        .row-source:hover {
+            background: #f8f9fa;
+        }
+
+        .source-name-cell {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .row-source .source-name-cell {
+            padding-left: 36px;
+        }
+
+        .table-footer {
+            text-align: center;
+            padding: 15px;
+            color: #7f8c8d;
+            font-size: 0.9em;
+            background: #f8f9fa;
+            border-radius: 0 0 12px 12px;
+        }
+
         @media (max-width: 768px) {
             .hero-section h1 {
                 font-size: 1.8em;
@@ -531,6 +773,29 @@
                 grid-template-columns: 100px 50px 1fr;
                 gap: 8px;
                 font-size: 0.95em;
+            }
+
+            .summary-table {
+                font-size: 0.85em;
+            }
+
+            .summary-table th,
+            .summary-table td {
+                padding: 10px 8px;
+            }
+
+            .row-source .source-name-cell {
+                padding-left: 20px;
+            }
+
+            .table-controls {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .toggle-btn {
+                width: 100%;
+                max-width: 200px;
             }
         }
     </style>
