@@ -5,12 +5,14 @@ Architecture:
   Phase 1: Data Collection - Fetch all atomic sources + aggregates
   Phase 2: Projection & Correction - Apply component-level corrections
   Phase 3: Plot Generation - Create visualizations from corrected data
+  Phase 4: Summary Table Update - Update Google Sheets with yesterday/last week data
 
 Key improvements:
 - Weekly hourly averages for projection (not daily)
 - Component-level aggregate correction
 - Proper Total Generation correction using all sources
 - Debug output for threshold violations
+- Google Sheets integration for summary table
 """
 
 from entsoe import EntsoePandasClient
@@ -25,8 +27,18 @@ import os
 import sys
 import argparse
 import time
+import json
 
 warnings.filterwarnings('ignore')
+
+# Google Sheets imports (lazy loaded to avoid errors if not installed)
+try:
+    import gspread
+    from google.oauth2.service_account import Credentials
+    GSPREAD_AVAILABLE = True
+except ImportError:
+    GSPREAD_AVAILABLE = False
+    print("⚠ gspread not available - Google Sheets update will be skipped")
 
 # Create plots directory
 os.makedirs('plots', exist_ok=True)
@@ -926,6 +938,185 @@ def generate_plot_for_source(source_type, corrected_data, output_file):
     print(f"✓ Plot saved to {output_file}")
 
 
+# ==============================================================================
+# PHASE 4: SUMMARY TABLE UPDATE
+# ==============================================================================
+
+def calculate_period_totals(period_data, period_name):
+    """
+    Calculate total production (GWh) and percentages for a period
+    Returns dict: {source_name: {'gwh': value, 'percentage': value}}
+    """
+    if not period_data:
+        return {}
+    
+    totals = {}
+    
+    # Get total generation
+    total_gen_data = period_data.get('total_generation', {})
+    total_gen_gwh = sum(total_gen_data.values()) / 1000  # MW to GWh
+    
+    # Calculate for atomic sources
+    for source in ATOMIC_SOURCES:
+        if 'atomic_sources' not in period_data or source not in period_data['atomic_sources']:
+            continue
+        
+        source_data = period_data['atomic_sources'][source]
+        
+        # Sum all countries, all timestamps
+        source_total_mw = 0
+        for timestamp, countries in source_data.items():
+            source_total_mw += sum(countries.values())
+        
+        source_gwh = source_total_mw / 1000  # Convert to GWh
+        percentage = (source_gwh / total_gen_gwh * 100) if total_gen_gwh > 0 else 0
+        
+        totals[source] = {
+            'gwh': source_gwh,
+            'percentage': percentage
+        }
+    
+    # Calculate for aggregates
+    for agg_source in AGGREGATE_SOURCES:
+        if agg_source not in period_data:
+            continue
+        
+        agg_data = period_data[agg_source]
+        
+        # Sum all timestamps
+        agg_total_mw = 0
+        for timestamp, countries in agg_data.items():
+            agg_total_mw += sum(countries.values())
+        
+        agg_gwh = agg_total_mw / 1000
+        percentage = (agg_gwh / total_gen_gwh * 100) if total_gen_gwh > 0 else 0
+        
+        totals[agg_source] = {
+            'gwh': agg_gwh,
+            'percentage': percentage
+        }
+    
+    return totals
+
+
+def update_summary_table_worksheet(corrected_data):
+    """
+    Update Google Sheets "Summary Table Data" worksheet with yesterday/last week data
+    Uses PROJECTED (corrected) data for accuracy
+    """
+    if not GSPREAD_AVAILABLE:
+        print("\n⚠ Skipping Google Sheets update - gspread not available")
+        return
+    
+    print("\n" + "=" * 80)
+    print("PHASE 4: UPDATE SUMMARY TABLE (GOOGLE SHEETS)")
+    print("=" * 80)
+    
+    try:
+        # Get credentials
+        google_creds_json = os.environ.get('GOOGLE_CREDENTIALS_JSON')
+        if not google_creds_json:
+            print("⚠ GOOGLE_CREDENTIALS_JSON not set - skipping Sheets update")
+            return
+        
+        creds_dict = json.loads(google_creds_json)
+        scope = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
+        credentials = Credentials.from_service_account_info(creds_dict, scopes=scope)
+        gc = gspread.authorize(credentials)
+        
+        # Open spreadsheet
+        spreadsheet = gc.open('EU Energy Production Data')
+        print("✓ Connected to spreadsheet")
+        
+        # Get or create worksheet
+        try:
+            worksheet = spreadsheet.worksheet('Summary Table Data')
+            print("✓ Found existing 'Summary Table Data' worksheet")
+        except gspread.WorksheetNotFound:
+            worksheet = spreadsheet.add_worksheet(title='Summary Table Data', rows=20, cols=10)
+            print("✓ Created new 'Summary Table Data' worksheet")
+            
+            # Add headers
+            headers = [
+                'Source', 
+                'Yesterday_GWh', 'Yesterday_%', 
+                'LastWeek_GWh', 'LastWeek_%',
+                'YTD2025_GWh', 'YTD2025_%',
+                'Avg2020_2024_GWh', 'Avg2020_2024_%',
+                'Last_Updated'
+            ]
+            worksheet.update('A1:J1', [headers])
+            worksheet.format('A1:J1', {'textFormat': {'bold': True}})
+        
+        # Calculate yesterday totals (using PROJECTED data)
+        yesterday_totals = calculate_period_totals(
+            corrected_data.get('yesterday_projected', {}), 
+            'yesterday'
+        )
+        
+        # Calculate last week totals (no projection needed for historical)
+        week_totals = calculate_period_totals(
+            corrected_data.get('week_ago', {}),
+            'week_ago'
+        )
+        
+        if not yesterday_totals or not week_totals:
+            print("⚠ Insufficient data to update summary table")
+            return
+        
+        # Prepare data rows
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M UTC')
+        
+        # Order: Aggregates first, then individual sources
+        source_order = [
+            'all-renewables',
+            'solar', 'wind', 'hydro', 'biomass', 'geothermal',
+            'all-non-renewables',
+            'gas', 'coal', 'nuclear', 'oil', 'waste'
+        ]
+        
+        rows = []
+        for source in source_order:
+            if source not in yesterday_totals or source not in week_totals:
+                continue
+            
+            # Convert source name to display format
+            display_name = DISPLAY_NAMES.get(source, source.title())
+            
+            row = [
+                display_name,
+                f"{yesterday_totals[source]['gwh']:.1f}",
+                f"{yesterday_totals[source]['percentage']:.2f}",
+                f"{week_totals[source]['gwh']:.1f}",
+                f"{week_totals[source]['percentage']:.2f}",
+                '',  # YTD2025 - filled by plotting script
+                '',  # YTD2025% - filled by plotting script
+                '',  # Avg2020-2024 - filled by plotting script
+                '',  # Avg2020-2024% - filled by plotting script
+                timestamp
+            ]
+            rows.append(row)
+        
+        # Update worksheet (starting from row 2, after headers)
+        if rows:
+            cell_range = f'A2:J{len(rows) + 1}'
+            worksheet.update(cell_range, rows)
+            
+            # Format aggregate rows (bold)
+            worksheet.format('A2:J2', {'textFormat': {'bold': True}})  # All Renewables
+            worksheet.format('A8:J8', {'textFormat': {'bold': True}})  # All Non-Renewables
+            
+            print(f"✓ Updated {len(rows)} sources with yesterday/last week data")
+            print(f"   Worksheet: {spreadsheet.url}")
+        else:
+            print("⚠ No data to update")
+    
+    except Exception as e:
+        print(f"✗ Error updating Google Sheets: {e}")
+        import traceback
+        traceback.print_exc()
+
+
 def main():
     """
     Main function - orchestrates the 3 phases
@@ -989,6 +1180,9 @@ def main():
         with open('plots/last_update.html', 'w') as f:
             f.write(f'<p>Last updated: {timestamp}</p>')
         
+        # Phase 4: Update Summary Table in Google Sheets
+        update_summary_table_worksheet(corrected_data)
+        
         print(f"\n" + "=" * 80)
         if args.source:
             print(f"✓ COMPLETE! {DISPLAY_NAMES[args.source]} plot generated")
@@ -996,6 +1190,7 @@ def main():
             print(f"✓ COMPLETE! All 12 plots generated successfully")
             print(f"   - 10 atomic sources")
             print(f"   - 2 aggregates")
+            print(f"   - Summary table updated in Google Sheets")
         print("=" * 80)
         
     except Exception as e:
