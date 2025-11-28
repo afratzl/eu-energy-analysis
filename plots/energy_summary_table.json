@@ -1,11 +1,11 @@
 {
-  "last_updated": "2025-11-28 14:56:01 UTC",
+  "last_updated": "2025-11-28 15:59:16 UTC",
   "sources": [
     {
       "source": "All Renewables",
       "category": "aggregate-renewable",
       "yesterday": {
-        "gwh": 16199.9,
+        "gwh": 16199.7,
         "twh": 16.2,
         "percentage": 46.16
       },
@@ -29,7 +29,7 @@
       "source": "Solar",
       "category": "renewable",
       "yesterday": {
-        "gwh": 1473.5,
+        "gwh": 1473.4,
         "twh": 1.47,
         "percentage": 4.2
       },
