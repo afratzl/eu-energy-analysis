@@ -1,13 +1,13 @@
 {
-  "last_updated": "2025-11-29 07:53:17 UTC",
+  "last_updated": "2025-11-29 09:04:43 UTC",
   "sources": [
     {
       "source": "All Renewables",
       "category": "aggregate-renewable",
       "yesterday": {
-        "gwh": 15351.4,
+        "gwh": 15350.4,
         "twh": 15.35,
-        "percentage": 45.35
+        "percentage": 45.34
       },
       "last_week": {
         "gwh": 95288.0,
@@ -29,7 +29,7 @@
       "source": "Solar",
       "category": "renewable",
       "yesterday": {
-        "gwh": 1449.4,
+        "gwh": 1448.3,
         "twh": 1.45,
         "percentage": 4.28
       },
@@ -151,7 +151,7 @@
       "yesterday": {
         "gwh": 18502.5,
         "twh": 18.5,
-        "percentage": 54.65
+        "percentage": 54.66
       },
       "last_week": {
         "gwh": 131648.2,
