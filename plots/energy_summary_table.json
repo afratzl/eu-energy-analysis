@@ -1,18 +1,18 @@
 {
-  "last_updated": "2025-11-30 04:04:27 UTC",
+  "last_updated": "2025-11-30 05:11:20 UTC",
   "sources": [
     {
       "source": "All Renewables",
       "category": "aggregate-renewable",
       "yesterday": {
-        "gwh": 15357.6,
-        "twh": 15.36,
-        "percentage": 45.38
+        "gwh": 13295.2,
+        "twh": 13.3,
+        "percentage": 43.9
       },
       "last_week": {
-        "gwh": 95278.7,
-        "twh": 95.28,
-        "percentage": 41.99
+        "gwh": 97740.3,
+        "twh": 97.74,
+        "percentage": 43.14
       },
       "ytd_2025": {
         "gwh": 32864341.5,
@@ -29,14 +29,14 @@
       "source": "Solar",
       "category": "renewable",
       "yesterday": {
-        "gwh": 1447.0,
-        "twh": 1.45,
-        "percentage": 4.28
+        "gwh": 1265.1,
+        "twh": 1.27,
+        "percentage": 4.18
       },
       "last_week": {
-        "gwh": 9993.5,
-        "twh": 9.99,
-        "percentage": 4.4
+        "gwh": 9789.2,
+        "twh": 9.79,
+        "percentage": 4.32
       },
       "ytd_2025": {
         "gwh": 8184161.8,
@@ -53,14 +53,14 @@
       "source": "Wind",
       "category": "renewable",
       "yesterday": {
-        "gwh": 8313.4,
-        "twh": 8.31,
-        "percentage": 24.56
+        "gwh": 7188.7,
+        "twh": 7.19,
+        "percentage": 23.74
       },
       "last_week": {
-        "gwh": 46971.5,
-        "twh": 46.97,
-        "percentage": 20.7
+        "gwh": 50136.0,
+        "twh": 50.14,
+        "percentage": 22.13
       },
       "ytd_2025": {
         "gwh": 12096528.7,
@@ -77,14 +77,14 @@
       "source": "Hydro",
       "category": "renewable",
       "yesterday": {
-        "gwh": 4594.2,
-        "twh": 4.59,
-        "percentage": 13.57
+        "gwh": 3859.8,
+        "twh": 3.86,
+        "percentage": 12.75
       },
       "last_week": {
-        "gwh": 31130.3,
-        "twh": 31.13,
-        "percentage": 13.72
+        "gwh": 30775.6,
+        "twh": 30.78,
+        "percentage": 13.58
       },
       "ytd_2025": {
         "gwh": 10258993.5,
@@ -101,14 +101,14 @@
       "source": "Biomass",
       "category": "renewable",
       "yesterday": {
-        "gwh": 939.1,
-        "twh": 0.94,
-        "percentage": 2.77
+        "gwh": 917.5,
+        "twh": 0.92,
+        "percentage": 3.03
       },
       "last_week": {
-        "gwh": 6753.4,
-        "twh": 6.75,
-        "percentage": 2.98
+        "gwh": 6609.4,
+        "twh": 6.61,
+        "percentage": 2.92
       },
       "ytd_2025": {
         "gwh": 2093378.4,
@@ -125,12 +125,12 @@
       "source": "Geothermal",
       "category": "renewable",
       "yesterday": {
-        "gwh": 63.9,
+        "gwh": 64.2,
         "twh": 0.06,
-        "percentage": 0.19
+        "percentage": 0.21
       },
       "last_week": {
-        "gwh": 429.9,
+        "gwh": 430.1,
         "twh": 0.43,
         "percentage": 0.19
       },
@@ -149,14 +149,14 @@
       "source": "All Non-Renewables",
       "category": "aggregate-non-renewable",
       "yesterday": {
-        "gwh": 18488.2,
-        "twh": 18.49,
-        "percentage": 54.62
+        "gwh": 16987.2,
+        "twh": 16.99,
+        "percentage": 56.1
       },
       "last_week": {
-        "gwh": 131648.0,
-        "twh": 131.65,
-        "percentage": 58.01
+        "gwh": 128817.5,
+        "twh": 128.82,
+        "percentage": 56.86
       },
       "ytd_2025": {
         "gwh": 36594412.7,
@@ -173,14 +173,14 @@
       "source": "Gas",
       "category": "non-renewable",
       "yesterday": {
-        "gwh": 6042.2,
-        "twh": 6.04,
-        "percentage": 17.85
+        "gwh": 5092.7,
+        "twh": 5.09,
+        "percentage": 16.82
       },
       "last_week": {
-        "gwh": 43186.9,
-        "twh": 43.19,
-        "percentage": 19.03
+        "gwh": 41323.5,
+        "twh": 41.32,
+        "percentage": 18.24
       },
       "ytd_2025": {
         "gwh": 10122976.0,
@@ -197,14 +197,14 @@
       "source": "Coal",
       "category": "non-renewable",
       "yesterday": {
-        "gwh": 3496.8,
-        "twh": 3.5,
-        "percentage": 10.33
+        "gwh": 3178.2,
+        "twh": 3.18,
+        "percentage": 10.5
       },
       "last_week": {
-        "gwh": 26524.2,
-        "twh": 26.52,
-        "percentage": 11.69
+        "gwh": 25642.2,
+        "twh": 25.64,
+        "percentage": 11.32
       },
       "ytd_2025": {
         "gwh": 6651912.6,
@@ -221,14 +221,14 @@
       "source": "Nuclear",
       "category": "non-renewable",
       "yesterday": {
-        "gwh": 8039.4,
-        "twh": 8.04,
-        "percentage": 23.75
+        "gwh": 7949.4,
+        "twh": 7.95,
+        "percentage": 26.25
       },
       "last_week": {
-        "gwh": 54554.3,
-        "twh": 54.55,
-        "percentage": 24.04
+        "gwh": 54732.9,
+        "twh": 54.73,
+        "percentage": 24.16
       },
       "ytd_2025": {
         "gwh": 16621498.0,
@@ -245,14 +245,14 @@
       "source": "Oil",
       "category": "non-renewable",
       "yesterday": {
-        "gwh": 168.3,
-        "twh": 0.17,
+        "gwh": 150.0,
+        "twh": 0.15,
         "percentage": 0.5
       },
       "last_week": {
-        "gwh": 1321.8,
-        "twh": 1.32,
-        "percentage": 0.58
+        "gwh": 1298.5,
+        "twh": 1.3,
+        "percentage": 0.57
       },
       "ytd_2025": {
         "gwh": 355522.1,
@@ -269,14 +269,14 @@
       "source": "Waste",
       "category": "non-renewable",
       "yesterday": {
-        "gwh": 741.4,
-        "twh": 0.74,
-        "percentage": 2.19
+        "gwh": 616.9,
+        "twh": 0.62,
+        "percentage": 2.04
       },
       "last_week": {
-        "gwh": 6060.7,
-        "twh": 6.06,
-        "percentage": 2.67
+        "gwh": 5820.3,
+        "twh": 5.82,
+        "percentage": 2.57
       },
       "ytd_2025": {
         "gwh": 2776551.2,
