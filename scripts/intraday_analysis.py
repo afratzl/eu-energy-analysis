@@ -53,6 +53,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime, timedelta
+import calendar
 import warnings
 import os
 import sys
@@ -134,6 +135,18 @@ DISPLAY_NAMES = {
     'all-renewables': 'All Renewables',
     'all-non-renewables': 'All Non-Renewables'
 }
+
+
+def format_change_percentage(value):
+    """
+    Format change percentage with smart decimal handling
+    - If |value| >= 10: No decimals (e.g., "+180%", "-58%")
+    - If |value| < 10: One decimal (e.g., "+5.8%", "+0.3%", "-2.1%")
+    """
+    if abs(value) >= 10:
+        return f"{value:+.0f}%"  # + sign for positive, - for negative
+    else:
+        return f"{value:+.1f}%"
 
 
 def get_intraday_data_for_country(country, start_date, end_date, client, data_type='generation', max_retries=3):
@@ -1074,20 +1087,22 @@ def update_summary_table_worksheet(corrected_data):
             worksheet = spreadsheet.worksheet('Summary Table Data')
             print("✓ Found existing 'Summary Table Data' worksheet")
         except gspread.WorksheetNotFound:
-            worksheet = spreadsheet.add_worksheet(title='Summary Table Data', rows=20, cols=10)
+            worksheet = spreadsheet.add_worksheet(title='Summary Table Data', rows=20, cols=15)
             print("✓ Created new 'Summary Table Data' worksheet")
             
-            # Add headers
+            # Add headers (now includes K-N for change from 2015)
             headers = [
                 'Source', 
                 'Yesterday_GWh', 'Yesterday_%', 
                 'LastWeek_GWh', 'LastWeek_%',
                 'YTD2025_GWh', 'YTD2025_%',
                 'Avg2020_2024_GWh', 'Avg2020_2024_%',
-                'Last_Updated'
+                'Last_Updated',
+                'Yesterday_Change_2015_%', 'LastWeek_Change_2015_%',
+                'YTD2025_Change_2015_%', 'Avg2020_2024_Change_2015_%'
             ]
-            worksheet.update('A1:J1', [headers])
-            worksheet.format('A1:J1', {'textFormat': {'bold': True}})
+            worksheet.update('A1:N1', [headers])
+            worksheet.format('A1:N1', {'textFormat': {'bold': True}})
         
         # Calculate yesterday totals (using PROJECTED data)
         yesterday_totals = calculate_period_totals(
@@ -1104,6 +1119,88 @@ def update_summary_table_worksheet(corrected_data):
         if not yesterday_totals or not week_totals:
             print("⚠ Insufficient data to update summary table")
             return
+        
+        # Load 2015 data for change calculation
+        print("  Loading 2015 baseline data...")
+        data_2015 = {}
+        
+        # Get yesterday's month for baseline (e.g., if yesterday was Nov 30, use November 2015)
+        yesterday_date = datetime.now() - timedelta(days=1)
+        baseline_month = yesterday_date.month  # e.g., 11 for November
+        
+        # Map source names to worksheet names
+        source_to_worksheet = {
+            'solar': 'Solar Monthly Production',
+            'wind': 'Wind Monthly Production',
+            'hydro': 'Hydro Monthly Production',
+            'biomass': 'Biomass Monthly Production',
+            'geothermal': 'Geothermal Monthly Production',
+            'gas': 'Gas Monthly Production',
+            'coal': 'Coal Monthly Production',
+            'nuclear': 'Nuclear Monthly Production',
+            'oil': 'Oil Monthly Production',
+            'waste': 'Waste Monthly Production',
+            'all-renewables': 'All Renewables Monthly Production',
+            'all-non-renewables': None  # Calculated from Total - Renewables
+        }
+        
+        for source in source_order:
+            if source == 'all-non-renewables':
+                continue  # Will calculate this separately
+            
+            worksheet_name = source_to_worksheet.get(source)
+            if not worksheet_name:
+                continue
+            
+            try:
+                ws_2015 = spreadsheet.worksheet(worksheet_name)
+                values = ws_2015.get_all_values()
+                
+                if len(values) < 2:
+                    continue
+                
+                # Parse to find 2015 data
+                df = pd.DataFrame(values[1:], columns=values[0])
+                df = df[df['Month'] != 'Total']
+                
+                # Check if 2015 column exists
+                if '2015' not in df.columns:
+                    print(f"  ⚠ No 2015 data for {source}")
+                    continue
+                
+                # Get the monthly average for the baseline month
+                month_abbr = calendar.month_abbr[baseline_month]
+                month_row = df[df['Month'] == month_abbr]
+                
+                if not month_row.empty:
+                    value_2015 = pd.to_numeric(month_row['2015'].iloc[0], errors='coerce')
+                    if not pd.isna(value_2015):
+                        data_2015[source] = value_2015  # This is daily average in GWh
+                    
+            except Exception as e:
+                print(f"  ⚠ Could not load 2015 data for {source}: {e}")
+                continue
+        
+        # Calculate all-non-renewables from Total - Renewables
+        if 'all-renewables' in data_2015:
+            try:
+                ws_total = spreadsheet.worksheet('Total Generation Monthly Production')
+                values = ws_total.get_all_values()
+                df = pd.DataFrame(values[1:], columns=values[0])
+                df = df[df['Month'] != 'Total']
+                
+                if '2015' in df.columns:
+                    month_abbr = calendar.month_abbr[baseline_month]
+                    month_row = df[df['Month'] == month_abbr]
+                    
+                    if not month_row.empty:
+                        total_2015 = pd.to_numeric(month_row['2015'].iloc[0], errors='coerce')
+                        if not pd.isna(total_2015):
+                            data_2015['all-non-renewables'] = total_2015 - data_2015['all-renewables']
+            except:
+                pass
+        
+        print(f"  ✓ Loaded 2015 baseline for {len(data_2015)} sources")
         
         # Prepare data rows - ONLY columns that intraday owns
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M UTC')
@@ -1124,36 +1221,64 @@ def update_summary_table_worksheet(corrected_data):
         
         worksheet.update('A2:A13', source_names)
         
-        # Now update ONLY the columns intraday owns: B-E (Yesterday, Last Week)
-        data_updates = []
+        # Now update columns B-E (Yesterday, Last Week) and K-L (Change from 2015)
+        data_updates_be = []  # Columns B-E
+        data_updates_kl = []  # Columns K-L
+        
         for source in source_order:
             if source not in yesterday_totals or source not in week_totals:
-                data_updates.append(['', '', '', ''])
+                data_updates_be.append(['', '', '', ''])
+                data_updates_kl.append(['', ''])
                 continue
             
-            row = [
+            # Columns B-E (existing)
+            row_be = [
                 f"{yesterday_totals[source]['gwh']:.1f}",      # B: Yesterday_GWh
                 f"{yesterday_totals[source]['percentage']:.2f}",  # C: Yesterday_%
                 f"{week_totals[source]['gwh']:.1f}",           # D: LastWeek_GWh
                 f"{week_totals[source]['percentage']:.2f}"     # E: LastWeek_%
-                # DO NOT update F-I (YTD and Historical) - those belong to plotting script!
             ]
-            data_updates.append(row)
+            data_updates_be.append(row_be)
+            
+            # Columns K-L (change from 2015)
+            yesterday_change = ''
+            lastweek_change = ''
+            
+            if source in data_2015 and data_2015[source] > 0:
+                baseline_daily = data_2015[source]  # Daily average in GWh
+                
+                # Yesterday change
+                yesterday_gwh = yesterday_totals[source]['gwh']
+                change_y = (yesterday_gwh - baseline_daily) / baseline_daily * 100
+                yesterday_change = format_change_percentage(change_y)
+                
+                # Last week change (7 days)
+                baseline_week = baseline_daily * 7
+                lastweek_gwh = week_totals[source]['gwh']
+                change_w = (lastweek_gwh - baseline_week) / baseline_week * 100
+                lastweek_change = format_change_percentage(change_w)
+            
+            row_kl = [yesterday_change, lastweek_change]
+            data_updates_kl.append(row_kl)
         
-        # Update columns B-E only (preserves F-I historical data!)
-        if data_updates:
-            worksheet.update('B2:E13', data_updates)
+        # Update columns B-E (preserves F-I historical data!)
+        if data_updates_be:
+            worksheet.update('B2:E13', data_updates_be)
+        
+        # Update columns K-L (change from 2015)
+        if data_updates_kl:
+            worksheet.update('K2:L13', data_updates_kl)
             
             # Update timestamp in column J
             timestamp_updates = [[timestamp]] * len(source_order)
             worksheet.update('J2:J13', timestamp_updates)
             
             # Format aggregate rows (bold)
-            worksheet.format('A2:J2', {'textFormat': {'bold': True}})  # All Renewables
-            worksheet.format('A8:J8', {'textFormat': {'bold': True}})  # All Non-Renewables
+            worksheet.format('A2:N2', {'textFormat': {'bold': True}})  # All Renewables
+            worksheet.format('A8:N8', {'textFormat': {'bold': True}})  # All Non-Renewables
             
-            print(f"✓ Updated {len(source_order)} sources with yesterday/last week data (columns B-E)")
-            print(f"   Historical data (columns F-I) preserved!")
+            print(f"✓ Updated {len(source_order)} sources with yesterday/last week data (columns B-E, K-L)")
+            print(f"   Historical data (columns F-I, M-N) preserved!")
             print(f"   Worksheet: {spreadsheet.url}")
         else:
             print("⚠ No data to update")
