@@ -1009,7 +1009,8 @@ def calculate_period_totals(period_data, period_name):
     
     # Get total generation
     total_gen_data = period_data.get('total_generation', {})
-    total_gen_gwh = sum(total_gen_data.values()) / 1000  # MW to GWh
+    # Convert MW to GWh: MW * 0.25 hours (15-min intervals) / 1000
+    total_gen_gwh = sum(total_gen_data.values()) * 0.25 / 1000
     
     # Calculate for atomic sources
     for source in ATOMIC_SOURCES:
@@ -1023,7 +1024,9 @@ def calculate_period_totals(period_data, period_name):
         for timestamp, countries in source_data.items():
             source_total_mw += sum(countries.values())
         
-        source_gwh = source_total_mw / 1000  # Convert to GWh
+        # Convert MW to GWh: MW * hours / 1000
+        # For 15-minute intervals, each reading represents 0.25 hours
+        source_gwh = source_total_mw * 0.25 / 1000
         percentage = (source_gwh / total_gen_gwh * 100) if total_gen_gwh > 0 else 0
         
         totals[source] = {
@@ -1043,7 +1046,8 @@ def calculate_period_totals(period_data, period_name):
         for timestamp, countries in agg_data.items():
             agg_total_mw += sum(countries.values())
         
-        agg_gwh = agg_total_mw / 1000
+        # Convert MW to GWh: MW * 0.25 hours (15-min intervals) / 1000
+        agg_gwh = agg_total_mw * 0.25 / 1000
         percentage = (agg_gwh / total_gen_gwh * 100) if total_gen_gwh > 0 else 0
         
         totals[agg_source] = {
