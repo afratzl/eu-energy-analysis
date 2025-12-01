@@ -812,8 +812,8 @@ def plot_analysis(stats_data, source_type, output_file):
         print("No data for plotting")
         return None
 
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 20))
-    plt.subplots_adjust(hspace=0.45)  # More space between subplots
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 24))
+    plt.subplots_adjust(hspace=0.5)  # More space between subplots
 
     colors = {
         'today': '#FF4444',
@@ -852,7 +852,7 @@ def plot_analysis(stats_data, source_type, output_file):
     fig.suptitle(source_name, fontsize=34, fontweight='bold', x=0.5, y=0.98, ha="center")
     ax1.set_title('Percentage of EU Production', fontsize=26, fontweight='normal', pad=10)
     ax1.set_xlabel('Time of Day (Brussels)', fontsize=28, fontweight='bold', labelpad=15)
-    ax1.set_ylabel('Electricity production (%)', fontsize=28, fontweight='bold', labelpad=15)
+    ax1.set_ylabel('Electrical Power (%)', fontsize=28, fontweight='bold', labelpad=15)
 
     max_percentage = 0
     plot_order = ['week_ago', 'year_ago', 'two_years_ago', 'yesterday', 'today', 
@@ -902,7 +902,7 @@ def plot_analysis(stats_data, source_type, output_file):
              fontsize=34, fontweight='bold', ha='center', va='bottom')
     ax2.set_title('Absolute Production', fontsize=26, fontweight='normal', pad=20)
     ax2.set_xlabel('Time of Day (Brussels)', fontsize=28, fontweight='bold', labelpad=15)
-    ax2.set_ylabel('Electricity production (GW)', fontsize=28, fontweight='bold', labelpad=15)
+    ax2.set_ylabel('Electrical Power (GW)', fontsize=28, fontweight='bold', labelpad=15)
 
     max_energy = 0
 
@@ -963,7 +963,7 @@ def plot_analysis(stats_data, source_type, output_file):
                ncol=3, fontsize=20, frameon=False)
 
     plt.tight_layout(rect=[0, 0.05, 1, 0.985])  # More space at bottom for legends
-    plt.savefig(output_file, dpi=150, bbox_inches='tight')
+    plt.savefig(output_file, dpi=200, bbox_inches='tight')
     plt.close()
 
     return output_file
