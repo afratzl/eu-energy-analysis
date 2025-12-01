@@ -1198,14 +1198,17 @@ def update_summary_table_worksheet(corrected_data):
                     print(f"  ⚠ No 2015 data for {source}")
                     continue
                 
-                # Get the monthly average for the baseline month
+                # Get the monthly TOTAL for the baseline month
                 month_abbr = calendar.month_abbr[baseline_month]
                 month_row = df[df['Month'] == month_abbr]
                 
                 if not month_row.empty:
-                    value_2015 = pd.to_numeric(month_row['2015'].iloc[0], errors='coerce')
-                    if not pd.isna(value_2015):
-                        data_2015[source] = value_2015  # This is daily average in GWh
+                    monthly_total_2015 = pd.to_numeric(month_row['2015'].iloc[0], errors='coerce')
+                    if not pd.isna(monthly_total_2015):
+                        # Monthly sheets store MONTHLY TOTALS, so store as-is
+                        # We'll convert to daily when comparing
+                        data_2015[source] = monthly_total_2015
+                        print(f"  {source}: Nov 2015 = {monthly_total_2015:.1f} GWh (monthly total)")
                     
             except Exception as e:
                 print(f"  ⚠ Could not load 2015 data for {source}: {e}")
@@ -1224,9 +1227,10 @@ def update_summary_table_worksheet(corrected_data):
                     month_row = df[df['Month'] == month_abbr]
                     
                     if not month_row.empty:
-                        total_2015 = pd.to_numeric(month_row['2015'].iloc[0], errors='coerce')
-                        if not pd.isna(total_2015):
-                            data_2015['all-non-renewables'] = total_2015 - data_2015['all-renewables']
+                        total_2015_monthly = pd.to_numeric(month_row['2015'].iloc[0], errors='coerce')
+                        if not pd.isna(total_2015_monthly):
+                            # Store monthly totals
+                            data_2015['all-non-renewables'] = total_2015_monthly - data_2015['all-renewables']
             except:
                 pass
         
@@ -1267,15 +1271,21 @@ def update_summary_table_worksheet(corrected_data):
             lastweek_change = ''
             
             if source in data_2015 and data_2015[source] > 0:
-                baseline_daily = data_2015[source]  # Daily average in GWh
+                monthly_total_2015 = data_2015[source]  # Monthly total in GWh
+                days_in_baseline_month = calendar.monthrange(2015, baseline_month)[1]
                 
-                # Yesterday change
+                # Yesterday change: monthly_total / days_in_month * 1 day
+                baseline_yesterday = (monthly_total_2015 / days_in_baseline_month) * 1
                 yesterday_gwh = yesterday_totals[source]['gwh']
-                change_y = (yesterday_gwh - baseline_daily) / baseline_daily * 100
+                change_y = (yesterday_gwh - baseline_yesterday) / baseline_yesterday * 100
                 yesterday_change = format_change_percentage(change_y)
                 
-                # Last week change (7 days)
-                baseline_week = baseline_daily * 7
+                # Debug: print first source
+                if source == source_order[0]:
+                    print(f"  DEBUG {source}: yesterday={yesterday_gwh:.1f} GWh, baseline={baseline_yesterday:.1f} GWh (={monthly_total_2015:.1f}/{days_in_baseline_month}), change={change_y:.1f}%")
+                
+                # Last week change: monthly_total / days_in_month * 7 days
+                baseline_week = (monthly_total_2015 / days_in_baseline_month) * 7
                 lastweek_gwh = week_totals[source]['gwh']
                 change_w = (lastweek_gwh - baseline_week) / baseline_week * 100
                 lastweek_change = format_change_percentage(change_w)
