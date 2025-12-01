@@ -531,11 +531,19 @@
             letter-spacing: 0.025em;
         }
 
+        .summary-table-pro th:first-child {
+            padding-left: 24px;  /* Extra padding for source column */
+        }
+
         .summary-table-pro td {
             padding: 14px 20px;
             border-bottom: 1px solid #ecf0f1;
             font-size: 1.0625em;
             color: var(--color-text);
+        }
+
+        .summary-table-pro td:first-child {
+            padding-left: 24px;  /* Extra padding for source column */
         }
 
         .row-aggregate-pro {
@@ -577,7 +585,7 @@
         }
 
         .row-source-pro .source-name-cell-pro {
-            padding-left: 40px;
+            padding-left: 48px;  /* Indent subsections more */
         }
 
         .row-source-pro:hover {
@@ -689,6 +697,7 @@
             .summary-table-pro th:first-child,
             .summary-table-pro td:first-child {
                 width: 25%;  /* Source name column */
+                padding-left: 16px;  /* Extra padding from left edge */
             }
             
             .summary-table-pro th:nth-child(2),
@@ -703,7 +712,7 @@
             }
 
             .row-source-pro .source-name-cell-pro {
-                padding-left: 20px;
+                padding-left: 30px;  /* Indent subsections on mobile */
             }
 
             .row-source-pro {
@@ -749,6 +758,7 @@
             .summary-table-pro th:first-child,
             .summary-table-pro td:first-child {
                 width: 25%;
+                padding-left: 12px;  /* Extra padding from left edge */
             }
             
             .summary-table-pro th:nth-child(2),
@@ -763,7 +773,7 @@
             }
 
             .row-source-pro .source-name-cell-pro {
-                padding-left: 16px;
+                padding-left: 24px;  /* Indent subsections on phone */
             }
 
             .row-source-pro {
