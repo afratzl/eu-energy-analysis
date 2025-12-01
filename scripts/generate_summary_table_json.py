@@ -177,10 +177,29 @@ def generate_summary_json():
         output_path = 'plots/energy_summary_table.json'
         os.makedirs('plots', exist_ok=True)
         
-        with open(output_path, 'w') as f:
+        # Write to temporary file first
+        temp_path = output_path + '.tmp'
+        with open(temp_path, 'w') as f:
             json.dump(json_data, f, indent=2)
         
-        print(f"\n✓ Generated JSON with {len(json_data['sources'])} sources")
+        # Validate the JSON by reading it back
+        try:
+            with open(temp_path, 'r') as f:
+                content = f.read()
+                # Check for git conflict markers
+                if '<<<<<<< ' in content or '=======' in content or '>>>>>>> ' in content:
+                    raise ValueError("Git conflict markers detected in JSON file!")
+                # Validate it's valid JSON
+                json.loads(content)
+            # If validation passes, move temp file to final location
+            os.replace(temp_path, output_path)
+        except Exception as e:
+            print(f"ERROR: JSON validation failed: {e}")
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+            raise
+        
+        print(f"\n✓ Generated and validated JSON with {len(json_data['sources'])} sources")
         print(f"✓ Output: {output_path}")
         print(f"\n" + "=" * 60)
         print("COMPLETE!")
