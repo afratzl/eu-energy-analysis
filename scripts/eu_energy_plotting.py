@@ -1179,8 +1179,14 @@ def update_summary_table_historical_data(all_data):
             if 2025 in renewables_year_data:
                 for month in range(1, current_month + 1):
                     month_value = renewables_year_data[2025].get(month, 0)
-                    days_in_month = calendar.monthrange(2025, month)[1]
-                    renewables_ytd += month_value * days_in_month  # Convert daily average to monthly total
+                    if month < current_month:
+                        # Full month - sheet already has monthly total
+                        renewables_ytd += month_value
+                    else:
+                        # Partial month - current month
+                        current_day = current_date.day
+                        days_in_month = calendar.monthrange(2025, month)[1]
+                        renewables_ytd += month_value * (current_day / days_in_month)
             
             period_totals = []
             for year in range(2020, 2025):
@@ -1188,8 +1194,8 @@ def update_summary_table_historical_data(all_data):
                     year_total = 0
                     for month in range(1, 13):
                         month_value = renewables_year_data[year].get(month, 0)
-                        days_in_month = calendar.monthrange(year, month)[1]
-                        year_total += month_value * days_in_month  # Convert daily average to monthly total
+                        # Sheet already has monthly total, just sum
+                        year_total += month_value
                     period_totals.append(year_total)
             
             renewables_avg = sum(period_totals) / len(period_totals) if period_totals else 0
@@ -1208,8 +1214,14 @@ def update_summary_table_historical_data(all_data):
             if 2025 in total_year_data:
                 for month in range(1, current_month + 1):
                     month_value = total_year_data[2025].get(month, 0)
-                    days_in_month = calendar.monthrange(2025, month)[1]
-                    total_ytd += month_value * days_in_month  # Convert daily average to monthly total
+                    if month < current_month:
+                        # Full month - sheet already has monthly total
+                        total_ytd += month_value
+                    else:
+                        # Partial month - current month
+                        current_day = current_date.day
+                        days_in_month = calendar.monthrange(2025, month)[1]
+                        total_ytd += month_value * (current_day / days_in_month)
             
             non_renewables_ytd = total_ytd - renewables_ytd
             
@@ -1220,8 +1232,8 @@ def update_summary_table_historical_data(all_data):
                     year_total = 0
                     for month in range(1, 13):
                         month_value = total_year_data[year].get(month, 0)
-                        days_in_month = calendar.monthrange(year, month)[1]
-                        year_total += month_value * days_in_month  # Convert daily average to monthly total
+                        # Sheet already has monthly total, just sum
+                        year_total += month_value
                     period_totals.append(year_total)
             
             total_avg = sum(period_totals) / len(period_totals) if period_totals else 0
@@ -1248,21 +1260,22 @@ def update_summary_table_historical_data(all_data):
                 # YTD baseline
                 ytd_baseline = 0
                 for month in range(1, current_month + 1):
+                    month_value = renewables_year_data[2015].get(month, 0)
                     if month < current_month:
-                        month_value = renewables_year_data[2015].get(month, 0)
-                        days_in_month = calendar.monthrange(2015, month)[1]
-                        ytd_baseline += month_value * days_in_month
+                        # Full month - sheet already has monthly total
+                        ytd_baseline += month_value
                     else:
+                        # Partial month
                         current_day = current_date.day
-                        month_value = renewables_year_data[2015].get(month, 0)
-                        ytd_baseline += month_value * current_day
+                        days_in_month = calendar.monthrange(2015, month)[1]
+                        ytd_baseline += month_value * (current_day / days_in_month)
                 
                 # Full year baseline
                 year_2015_total = 0
                 for month in range(1, 13):
                     month_value = renewables_year_data[2015].get(month, 0)
-                    days_in_month = calendar.monthrange(2015, month)[1]
-                    year_2015_total += month_value * days_in_month
+                    # Sheet already has monthly total, just sum
+                    year_2015_total += month_value
                 
                 baselines_2015['All Renewables'] = {
                     'ytd': ytd_baseline,
@@ -1276,21 +1289,22 @@ def update_summary_table_historical_data(all_data):
                 # YTD baseline
                 total_ytd_2015 = 0
                 for month in range(1, current_month + 1):
+                    month_value = total_year_data[2015].get(month, 0)
                     if month < current_month:
-                        month_value = total_year_data[2015].get(month, 0)
-                        days_in_month = calendar.monthrange(2015, month)[1]
-                        total_ytd_2015 += month_value * days_in_month
+                        # Full month - sheet already has monthly total
+                        total_ytd_2015 += month_value
                     else:
+                        # Partial month
                         current_day = current_date.day
-                        month_value = total_year_data[2015].get(month, 0)
-                        total_ytd_2015 += month_value * current_day
+                        days_in_month = calendar.monthrange(2015, month)[1]
+                        total_ytd_2015 += month_value * (current_day / days_in_month)
                 
                 # Full year baseline
                 total_year_2015 = 0
                 for month in range(1, 13):
                     month_value = total_year_data[2015].get(month, 0)
-                    days_in_month = calendar.monthrange(2015, month)[1]
-                    total_year_2015 += month_value * days_in_month
+                    # Sheet already has monthly total, just sum
+                    total_year_2015 += month_value
                 
                 baselines_2015['All Non-Renewables'] = {
                     'ytd': total_ytd_2015 - baselines_2015['All Renewables']['ytd'],
