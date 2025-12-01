@@ -64,27 +64,25 @@
         <!-- DROPDOWN SELECTOR -->
         <div class="chart-selector">
             <label for="source-select">
-                <span id="color-indicator" style="display: inline-block; width: 16px; height: 16px; border-radius: 50%; background-color: #FFD700; margin-right: 8px; vertical-align: middle; border: 2px solid #333;"></span>
+                <span id="color-indicator" style="display: inline-block; width: 16px; height: 16px; border-radius: 50%; background-color: #00CED1; margin-right: 8px; vertical-align: middle; border: 2px solid #333;"></span>
                 Choose Energy Source:
             </label>
             <select id="source-select" onchange="showSource(this.value)">
-                <optgroup label="🌞 Renewable Sources">
-                    <option value="solar" selected data-color="#FFD700">Solar</option>
+                <optgroup label="Renewable Sources">
+                    <option value="all-renewables" selected data-color="#00CED1">All Renewables</option>
                     <option value="wind" data-color="#228B22">Wind</option>
                     <option value="hydro" data-color="#1E90FF">Hydro</option>
+                    <option value="solar" data-color="#FFD700">Solar</option>
                     <option value="biomass" data-color="#9ACD32">Biomass</option>
                     <option value="geothermal" data-color="#708090">Geothermal</option>
                 </optgroup>
-                <optgroup label="⚡ Non-Renewable Sources">
+                <optgroup label="Non-Renewable Sources">
+                    <option value="all-non-renewables" data-color="#000000">All Non-Renewables</option>
+                    <option value="nuclear" data-color="#8B4513">Nuclear</option>
                     <option value="gas" data-color="#FF1493">Gas</option>
                     <option value="coal" data-color="#8B008B">Coal</option>
-                    <option value="nuclear" data-color="#8B4513">Nuclear</option>
-                    <option value="oil" data-color="#191970">Oil</option>
                     <option value="waste" data-color="#808000">Waste</option>
-                </optgroup>
-                <optgroup label="📊 Totals">
-                    <option value="all-renewables" data-color="#00CED1">All Renewables</option>
-                    <option value="all-non-renewables" data-color="#000000">All Non-Renewables</option>
+                    <option value="oil" data-color="#191970">Oil</option>
                 </optgroup>
             </select>
         </div>
@@ -176,7 +174,7 @@
 
         // Load default source on page load
         window.addEventListener('DOMContentLoaded', () => {
-            showSource('solar');
+            showSource('all-renewables');
             loadTimestamp();
             
             // Reload timestamp every 5 minutes
