@@ -32,6 +32,18 @@ ENTSOE_COLORS = {
 }
 
 
+def format_change_percentage(value):
+    """
+    Format change percentage with smart decimal handling
+    - If |value| >= 10: No decimals (e.g., "+180%", "-58%")
+    - If |value| < 10: One decimal (e.g., "+5.8%", "+0.3%", "-2.1%")
+    """
+    if abs(value) >= 10:
+        return f"{value:+.0f}%"  # + sign for positive, - for negative
+    else:
+        return f"{value:+.1f}%"
+
+
 def load_data_from_google_sheets():
     """
     Load all energy data from Google Sheets using environment variables
@@ -1091,6 +1103,44 @@ def update_summary_table_historical_data(all_data):
                 'avg_2020_2024_gwh': avg_2020_2024_gwh
             }
         
+        # Calculate 2015 baselines for change calculation
+        baselines_2015 = {}
+        
+        for source_name in all_sources:
+            if source_name not in all_data:
+                continue
+            
+            year_data = all_data[source_name]['year_data']
+            
+            if 2015 not in year_data:
+                continue
+            
+            # YTD 2025 baseline: Same period in 2015 (Jan-current_month, with same days)
+            ytd_baseline = 0
+            for month in range(1, current_month + 1):
+                if month < current_month:
+                    # Full month
+                    month_value = year_data[2015].get(month, 0)
+                    days_in_month = calendar.monthrange(2015, month)[1]
+                    ytd_baseline += month_value * days_in_month
+                else:
+                    # Partial month (up to current day)
+                    current_day = current_date.day
+                    month_value = year_data[2015].get(month, 0)
+                    ytd_baseline += month_value * current_day
+            
+            # 2020-2024 baseline: Full year 2015
+            year_2015_total = 0
+            for month in range(1, 13):
+                month_value = year_data[2015].get(month, 0)
+                days_in_month = calendar.monthrange(2015, month)[1]
+                year_2015_total += month_value * days_in_month
+            
+            baselines_2015[source_name] = {
+                'ytd': ytd_baseline,
+                'year': year_2015_total
+            }
+        
         # Calculate aggregates: Use "All Renewables" from sheets if it exists, 
         # otherwise sum individual sources
         if 'All Renewables' in all_data:
@@ -1163,6 +1213,62 @@ def update_summary_table_historical_data(all_data):
             'avg_2020_2024_gwh': non_renewables_avg
         }
         
+        # Add 2015 baselines for aggregates
+        if 'All Renewables' in all_data:
+            renewables_year_data = all_data['All Renewables']['year_data']
+            if 2015 in renewables_year_data:
+                # YTD baseline
+                ytd_baseline = 0
+                for month in range(1, current_month + 1):
+                    if month < current_month:
+                        month_value = renewables_year_data[2015].get(month, 0)
+                        days_in_month = calendar.monthrange(2015, month)[1]
+                        ytd_baseline += month_value * days_in_month
+                    else:
+                        current_day = current_date.day
+                        month_value = renewables_year_data[2015].get(month, 0)
+                        ytd_baseline += month_value * current_day
+                
+                # Full year baseline
+                year_2015_total = 0
+                for month in range(1, 13):
+                    month_value = renewables_year_data[2015].get(month, 0)
+                    days_in_month = calendar.monthrange(2015, month)[1]
+                    year_2015_total += month_value * days_in_month
+                
+                baselines_2015['All Renewables'] = {
+                    'ytd': ytd_baseline,
+                    'year': year_2015_total
+                }
+        
+        # All Non-Renewables 2015 baseline from Total - Renewables
+        if 'Total Generation' in all_data and 'All Renewables' in baselines_2015:
+            total_year_data = all_data['Total Generation']['year_data']
+            if 2015 in total_year_data:
+                # YTD baseline
+                total_ytd_2015 = 0
+                for month in range(1, current_month + 1):
+                    if month < current_month:
+                        month_value = total_year_data[2015].get(month, 0)
+                        days_in_month = calendar.monthrange(2015, month)[1]
+                        total_ytd_2015 += month_value * days_in_month
+                    else:
+                        current_day = current_date.day
+                        month_value = total_year_data[2015].get(month, 0)
+                        total_ytd_2015 += month_value * current_day
+                
+                # Full year baseline
+                total_year_2015 = 0
+                for month in range(1, 13):
+                    month_value = total_year_data[2015].get(month, 0)
+                    days_in_month = calendar.monthrange(2015, month)[1]
+                    total_year_2015 += month_value * days_in_month
+                
+                baselines_2015['All Non-Renewables'] = {
+                    'ytd': total_ytd_2015 - baselines_2015['All Renewables']['ytd'],
+                    'year': total_year_2015 - baselines_2015['All Renewables']['year']
+                }
+        
         # Prepare updates with correct order
         source_order = [
             'All Renewables',
@@ -1212,23 +1318,43 @@ def update_summary_table_historical_data(all_data):
                 avg_total_gen = sum(period_total_gen) / len(period_total_gen) if period_total_gen else 0
                 avg_2020_2024_pct = (avg_2020_2024_gwh / avg_total_gen * 100) if avg_total_gen > 0 else 0
             
-            # Add to updates list (columns F, G, H, I)
+            # Calculate change from 2015
+            ytd_change_2015 = ''
+            avg_change_2015 = ''
+            
+            if source_name in baselines_2015:
+                # YTD 2025 change from 2015
+                baseline_ytd = baselines_2015[source_name]['ytd']
+                if baseline_ytd > 0:
+                    change = (ytd_2025_gwh - baseline_ytd) / baseline_ytd * 100
+                    ytd_change_2015 = format_change_percentage(change)
+                
+                # 2020-2024 change from 2015
+                baseline_year = baselines_2015[source_name]['year']
+                if baseline_year > 0:
+                    change = (avg_2020_2024_gwh - baseline_year) / baseline_year * 100
+                    avg_change_2015 = format_change_percentage(change)
+            
+            # Add to updates list (columns F, G, H, I, M, N)
             updates.append({
-                'range': f'F{row_idx}:I{row_idx}',
-                'values': [[
+                'range_fghi': f'F{row_idx}:I{row_idx}',
+                'values_fghi': [[
                     f"{ytd_2025_gwh:.1f}",
                     f"{ytd_2025_pct:.2f}",
                     f"{avg_2020_2024_gwh:.1f}",
                     f"{avg_2020_2024_pct:.2f}"
-                ]]
+                ]],
+                'range_mn': f'M{row_idx}:N{row_idx}',
+                'values_mn': [[ytd_change_2015, avg_change_2015]]
             })
         
         # Batch update all rows at once
         if updates:
             for update in updates:
-                worksheet.update(update['range'], update['values'])
+                worksheet.update(update['range_fghi'], update['values_fghi'])
+                worksheet.update(update['range_mn'], update['values_mn'])
             
-            print(f"✓ Updated {len(updates)} sources with YTD 2025 and 2020-2024 data")
+            print(f"✓ Updated {len(updates)} sources with YTD 2025 and 2020-2024 data (columns F-I, M-N)")
             
             # Update timestamp in last column
             timestamp = current_date.strftime('%Y-%m-%d %H:%M UTC')
