@@ -80,7 +80,7 @@
                         Percentage
                     </button>
                     <button id="toggle-absolute" class="toggle-btn-pro" onclick="showAbsolute()">
-                        Absolute (TWh)
+                        Absolute
                     </button>
                     <button id="toggle-change" class="toggle-btn-pro" onclick="showChange()">
                         Change from 2015
@@ -197,17 +197,19 @@
                     <span class="value-change" style="display:none">${source.last_week.change_from_2015}</span>
                 </td>`;
                 
-                // YTD 2025
+                // YTD 2025 - Convert to PWh
+                const ytd_pwh = (source.ytd_2025.twh / 1000).toFixed(2);
                 html += `<td>
                     <span class="value-pct">${source.ytd_2025.percentage}%</span>
-                    <span class="value-abs" style="display:none">${source.ytd_2025.twh} TWh</span>
+                    <span class="value-abs" style="display:none">${ytd_pwh} PWh</span>
                     <span class="value-change" style="display:none">${source.ytd_2025.change_from_2015}</span>
                 </td>`;
                 
-                // 2020-2024 Avg
+                // 2020-2024 Avg - Convert to PWh
+                const avg_pwh = (source.avg_2020_2024.twh / 1000).toFixed(2);
                 html += `<td>
                     <span class="value-pct">${source.avg_2020_2024.percentage}%</span>
-                    <span class="value-abs" style="display:none">${source.avg_2020_2024.twh} TWh</span>
+                    <span class="value-abs" style="display:none">${avg_pwh} PWh</span>
                     <span class="value-change" style="display:none">${source.avg_2020_2024.change_from_2015}</span>
                 </td>`;
                 
@@ -485,7 +487,7 @@
 
         .summary-table-pro {
             width: 100%;
-            min-width: 650px;
+            min-width: 550px;
             border-collapse: collapse;
             background: white;
             border: 1px solid var(--color-border);
@@ -677,7 +679,7 @@
                 display: block;
                 overflow-x: auto;
                 -webkit-overflow-scrolling: touch;
-                min-width: 500px;
+                min-width: 450px;
             }
 
             .summary-table-pro th,
@@ -718,7 +720,7 @@
         @media (max-width: 480px) {
             .summary-table-pro {
                 font-size: 0.7em;
-                min-width: 450px;
+                min-width: 400px;
             }
 
             .summary-table-pro th,
