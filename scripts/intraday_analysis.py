@@ -1120,6 +1120,14 @@ def update_summary_table_worksheet(corrected_data):
             print("⚠ Insufficient data to update summary table")
             return
         
+        # Define source order (needed for 2015 data loading)
+        source_order = [
+            'all-renewables',
+            'solar', 'wind', 'hydro', 'biomass', 'geothermal',
+            'all-non-renewables',
+            'gas', 'coal', 'nuclear', 'oil', 'waste'
+        ]
+        
         # Load 2015 data for change calculation
         print("  Loading 2015 baseline data...")
         data_2015 = {}
@@ -1204,14 +1212,6 @@ def update_summary_table_worksheet(corrected_data):
         
         # Prepare data rows - ONLY columns that intraday owns
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M UTC')
-        
-        # Order: Aggregates first, then individual sources
-        source_order = [
-            'all-renewables',
-            'solar', 'wind', 'hydro', 'biomass', 'geothermal',
-            'all-non-renewables',
-            'gas', 'coal', 'nuclear', 'oil', 'waste'
-        ]
         
         # First, update column A (Source names) if needed
         source_names = []
