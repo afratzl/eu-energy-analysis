@@ -140,6 +140,25 @@ def generate_summary_json():
             
             json_data["sources"].append(source_data)
         
+        # Define source order by contribution (most to least within category)
+        source_order_map = {
+            'All Renewables': 0,
+            'Wind': 1,           # Highest renewable contributor
+            'Hydro': 2,          # Second highest
+            'Solar': 3,          # Third
+            'Biomass': 4,        # Fourth
+            'Geothermal': 5,     # Lowest
+            'All Non-Renewables': 6,
+            'Nuclear': 7,        # Highest non-renewable
+            'Gas': 8,            # Second
+            'Coal': 9,           # Third
+            'Waste': 10,         # Fourth
+            'Oil': 11            # Lowest
+        }
+        
+        # Sort sources by contribution order
+        json_data["sources"].sort(key=lambda x: source_order_map.get(x["source"], 999))
+        
         # Write JSON file
         output_path = 'plots/energy_summary_table.json'
         os.makedirs('plots', exist_ok=True)
