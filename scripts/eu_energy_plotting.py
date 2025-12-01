@@ -1105,8 +1105,14 @@ def update_summary_table_historical_data(all_data):
             if 2025 in year_data:
                 for month in range(1, current_month + 1):
                     month_value = year_data[2025].get(month, 0)
-                    days_in_month = calendar.monthrange(2025, month)[1]
-                    ytd_2025_gwh += month_value * days_in_month  # Convert daily average to monthly total
+                    if month < current_month:
+                        # Full month - sheet already has monthly total
+                        ytd_2025_gwh += month_value
+                    else:
+                        # Partial month - current month
+                        current_day = current_date.day
+                        days_in_month = calendar.monthrange(2025, month)[1]
+                        ytd_2025_gwh += month_value * (current_day / days_in_month)
             
             # Calculate 2020-2024 average (annual)
             period_totals = []
@@ -1115,8 +1121,8 @@ def update_summary_table_historical_data(all_data):
                     year_total = 0
                     for month in range(1, 13):
                         month_value = year_data[year].get(month, 0)
-                        days_in_month = calendar.monthrange(year, month)[1]
-                        year_total += month_value * days_in_month  # Convert daily average to monthly total
+                        # Sheet already has monthly total, just sum
+                        year_total += month_value
                     period_totals.append(year_total)
             
             avg_2020_2024_gwh = sum(period_totals) / len(period_totals) if period_totals else 0
@@ -1141,23 +1147,22 @@ def update_summary_table_historical_data(all_data):
             # YTD 2025 baseline: Same period in 2015 (Jan-current_month, with same days)
             ytd_baseline = 0
             for month in range(1, current_month + 1):
+                month_value = year_data[2015].get(month, 0)
                 if month < current_month:
-                    # Full month
-                    month_value = year_data[2015].get(month, 0)
-                    days_in_month = calendar.monthrange(2015, month)[1]
-                    ytd_baseline += month_value * days_in_month
+                    # Full month - sheet already has monthly total
+                    ytd_baseline += month_value
                 else:
                     # Partial month (up to current day)
                     current_day = current_date.day
-                    month_value = year_data[2015].get(month, 0)
-                    ytd_baseline += month_value * current_day
+                    days_in_month = calendar.monthrange(2015, month)[1]
+                    ytd_baseline += month_value * (current_day / days_in_month)
             
             # 2020-2024 baseline: Full year 2015
             year_2015_total = 0
             for month in range(1, 13):
                 month_value = year_data[2015].get(month, 0)
-                days_in_month = calendar.monthrange(2015, month)[1]
-                year_2015_total += month_value * days_in_month
+                # Sheet already has monthly total, just sum
+                year_2015_total += month_value
             
             baselines_2015[source_name] = {
                 'ytd': ytd_baseline,
