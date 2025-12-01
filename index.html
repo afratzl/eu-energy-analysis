@@ -157,32 +157,19 @@
     </footer>
 
     <script>
-        // Load timestamp
-        function loadTimestamp() {
-            fetch('plots/last_update.html')
-                .then(response => response.text())
-                .then(html => {
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-                    const timestamp = doc.body.textContent.replace('Last updated: ', '');
-                    document.getElementById('last-update-time').textContent = timestamp;
-                })
-                .catch(error => {
-                    document.getElementById('last-update-time').textContent = 'unavailable';
-                });
-        }
-
-        // Load and display summary table
-        function loadSummaryTable() {
+        // Load summary data (timestamp + table) - single fetch
+        function loadSummaryData() {
             fetch('plots/energy_summary_table.json')
                 .then(response => response.json())
                 .then(data => {
+                    // Update timestamp in info box
+                    document.getElementById('last-update-time').textContent = data.last_updated;
+                    // Display table
                     displaySummaryTable(data);
                 })
                 .catch(error => {
-                    console.error('Error loading summary table:', error);
-                    document.getElementById('summary-table-container').innerHTML = 
-                        '<div class="error-message-pro">Summary table not yet available. Data will appear after first update.</div>';
+                    console.error('Error loading summary data:', error);
+                    document.getElementById('last-update-time').textContent = 'unavailable';
                 });
         }
 
@@ -292,8 +279,7 @@
 
         // Load on page load
         window.addEventListener('DOMContentLoaded', () => {
-            loadTimestamp();
-            loadSummaryTable();
+            loadSummaryData();  // Single fetch for both timestamp and table
             
             // Restore user's preference
             const preference = localStorage.getItem('electricityView') || 'percentage';
