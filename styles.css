@@ -19,13 +19,13 @@ body {
 
 /* === NAVIGATION BAR === */
 .navbar {
-    background: linear-gradient(135deg, #003399 0%, #0066CC 100%);
-    border-bottom: none;
+    background: #ffffff;
+    border-bottom: 2px solid #e2e8f0;
     padding: 1rem 0;
     position: sticky;
     top: 0;
     z-index: 1000;
-    box-shadow: 0 2px 8px rgba(0, 51, 153, 0.3);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .nav-container {
@@ -40,7 +40,7 @@ body {
 .nav-title {
     font-size: 1.5rem;
     font-weight: 700;
-    color: white;
+    color: #1a202c;
 }
 
 .nav-links {
@@ -50,7 +50,7 @@ body {
 
 .nav-links a {
     text-decoration: none;
-    color: rgba(255, 255, 255, 0.9);
+    color: #4a5568;
     font-weight: 500;
     padding: 0.5rem 1rem;
     border-radius: 4px;
@@ -58,13 +58,13 @@ body {
 }
 
 .nav-links a:hover {
-    background-color: rgba(255, 255, 255, 0.15);
-    color: white;
+    background-color: rgba(0, 102, 204, 0.1);
+    color: #003399;
 }
 
 .nav-links a.active {
-    background-color: white;
-    color: #003399;
+    background: linear-gradient(135deg, #003399 0%, #0066CC 100%);
+    color: white;
 }
 
 /* === CONTAINER === */
