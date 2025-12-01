@@ -883,7 +883,10 @@ def plot_analysis(stats_data, source_type, output_file):
     ax1.set_ylim(0, max_percentage * 1.05 if max_percentage > 0 else 50)
 
     # PLOT 2 (BOTTOM): ABSOLUTE VALUES
-    ax2.set_title('Absolute Production', fontsize=26, fontweight='normal', pad=10)
+    # Add source name as title above this plot too
+    ax2.text(0.5, 1.08, source_name, transform=ax2.transAxes, 
+             fontsize=34, fontweight='bold', ha='center', va='bottom')
+    ax2.set_title('Absolute Production', fontsize=26, fontweight='normal', pad=35)
     ax2.set_xlabel('Time of Day (Brussels)', fontsize=28, fontweight='bold', labelpad=15)
     ax2.set_ylabel('Electricity production (GW)', fontsize=28, fontweight='bold', labelpad=15)
 
@@ -929,23 +932,23 @@ def plot_analysis(stats_data, source_type, output_file):
     ax2.set_xlim(0, len(time_labels))
     ax2.set_ylim(0, max_energy * 1.05)
 
-    # X-axis ticks
+    # X-axis ticks - with better alignment
     tick_positions = np.arange(0, len(time_labels), 8)
     for ax in [ax1, ax2]:
         ax.set_xticks(tick_positions)
-        ax.set_xticklabels([time_labels[i] for i in tick_positions], rotation=45)
+        ax.set_xticklabels([time_labels[i] for i in tick_positions], rotation=45, ha='right')
 
-    # Two legends - one below each plot (like monthly plots)
+    # Two legends - one below each plot (without frame)
     handles1, labels1 = ax1.get_legend_handles_labels()
     handles2, labels2 = ax2.get_legend_handles_labels()
     
-    ax1.legend(handles1, labels1, loc='upper center', bbox_to_anchor=(0.5, -0.15),
-               ncol=3, fontsize=20, frameon=True, framealpha=0.9, edgecolor='gray')
+    ax1.legend(handles1, labels1, loc='upper center', bbox_to_anchor=(0.5, -0.18),
+               ncol=3, fontsize=20, frameon=False)
     
-    ax2.legend(handles2, labels2, loc='upper center', bbox_to_anchor=(0.5, -0.15),
-               ncol=3, fontsize=20, frameon=True, framealpha=0.9, edgecolor='gray')
+    ax2.legend(handles2, labels2, loc='upper center', bbox_to_anchor=(0.5, -0.18),
+               ncol=3, fontsize=20, frameon=False)
 
-    plt.tight_layout(rect=[0, 0.02, 1, 0.985])
+    plt.tight_layout(rect=[0, 0.03, 1, 0.985])
     plt.savefig(output_file, dpi=150, bbox_inches='tight')
     plt.close()
 
