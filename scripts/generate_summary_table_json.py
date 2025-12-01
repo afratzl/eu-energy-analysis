@@ -72,7 +72,7 @@ def generate_summary_json():
         }
         
         for row in data_rows:
-            if len(row) < 10:  # Need at least 10 columns
+            if len(row) < 14:  # Need at least 14 columns (A-N)
                 continue
             
             source_name = row[0]
@@ -97,6 +97,10 @@ def generate_summary_json():
                 except ValueError:
                     return 0.0
             
+            def safe_string(val):
+                """Return string value or empty string"""
+                return str(val) if val else ""
+            
             yesterday_gwh = safe_float(row[1])
             yesterday_pct = safe_float(row[2])
             lastweek_gwh = safe_float(row[3])
@@ -106,6 +110,12 @@ def generate_summary_json():
             avg2020_2024_gwh = safe_float(row[7])
             avg2020_2024_pct = safe_float(row[8])
             last_updated = row[9] if len(row) > 9 else ""
+            
+            # Change from 2015 (columns K-N)
+            yesterday_change = safe_string(row[10]) if len(row) > 10 else ""
+            lastweek_change = safe_string(row[11]) if len(row) > 11 else ""
+            ytd2025_change = safe_string(row[12]) if len(row) > 12 else ""
+            avg2020_2024_change = safe_string(row[13]) if len(row) > 13 else ""
             
             # Convert GWh to TWh for better readability
             yesterday_twh = yesterday_gwh / 1000
@@ -119,22 +129,26 @@ def generate_summary_json():
                 "yesterday": {
                     "gwh": round(yesterday_gwh, 1),
                     "twh": round(yesterday_twh, 2),
-                    "percentage": round(yesterday_pct, 2)
+                    "percentage": round(yesterday_pct, 2),
+                    "change_from_2015": yesterday_change
                 },
                 "last_week": {
                     "gwh": round(lastweek_gwh, 1),
                     "twh": round(lastweek_twh, 2),
-                    "percentage": round(lastweek_pct, 2)
+                    "percentage": round(lastweek_pct, 2),
+                    "change_from_2015": lastweek_change
                 },
                 "ytd_2025": {
                     "gwh": round(ytd2025_gwh, 1),
                     "twh": round(ytd2025_twh, 2),
-                    "percentage": round(ytd2025_pct, 2)
+                    "percentage": round(ytd2025_pct, 2),
+                    "change_from_2015": ytd2025_change
                 },
                 "avg_2020_2024": {
                     "gwh": round(avg2020_2024_gwh, 1),
                     "twh": round(avg2020_2024_twh, 2),
-                    "percentage": round(avg2020_2024_pct, 2)
+                    "percentage": round(avg2020_2024_pct, 2),
+                    "change_from_2015": avg2020_2024_change
                 }
             }
             
