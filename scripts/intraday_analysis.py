@@ -935,17 +935,15 @@ def plot_analysis(stats_data, source_type, output_file):
         ax.set_xticks(tick_positions)
         ax.set_xticklabels([time_labels[i] for i in tick_positions], rotation=45)
 
-    # Add legends to both plots
+    # Two legends - one below each plot (like monthly plots)
     handles1, labels1 = ax1.get_legend_handles_labels()
     handles2, labels2 = ax2.get_legend_handles_labels()
     
-    # Legend for percentage plot (top)
-    ax1.legend(handles1, labels1, loc='upper right', fontsize=18, frameon=True, 
-               framealpha=0.9, edgecolor='gray')
+    ax1.legend(handles1, labels1, loc='upper center', bbox_to_anchor=(0.5, -0.15),
+               ncol=3, fontsize=20, frameon=True, framealpha=0.9, edgecolor='gray')
     
-    # Legend for absolute plot (bottom)
-    ax2.legend(handles2, labels2, loc='upper right', fontsize=18, frameon=True,
-               framealpha=0.9, edgecolor='gray')
+    ax2.legend(handles2, labels2, loc='upper center', bbox_to_anchor=(0.5, -0.15),
+               ncol=3, fontsize=20, frameon=True, framealpha=0.9, edgecolor='gray')
 
     plt.tight_layout(rect=[0, 0.02, 1, 0.985])
     plt.savefig(output_file, dpi=150, bbox_inches='tight')
