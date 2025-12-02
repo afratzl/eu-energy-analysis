@@ -1029,7 +1029,7 @@ def create_all_charts(all_data):
 
 def update_summary_table_historical_data(all_data):
     """
-    Update Google Sheets "Summary Table Data" with YTD 2025 and 2020-2024 average data
+    Update Google Sheets "Summary Table Data" with current year YTD and previous year data
     This fills in the columns that the intraday script leaves empty
     """
     print("\n" + "=" * 60)
@@ -1067,11 +1067,11 @@ def update_summary_table_historical_data(all_data):
                     'Source', 
                     'Yesterday_GWh', 'Yesterday_%', 
                     'LastWeek_GWh', 'LastWeek_%',
-                    'YTD2025_GWh', 'YTD2025_%',
-                    'Avg2020_2024_GWh', 'Avg2020_2024_%',
+                    f'YTD{current_year}_GWh', f'YTD{current_year}_%',
+                    f'{previous_year}_GWh', f'{previous_year}_%',
                     'Last_Updated',
                     'Yesterday_Change_2015_%', 'LastWeek_Change_2015_%',
-                    'YTD2025_Change_2015_%', 'Avg2020_2024_Change_2015_%'
+                    f'YTD{current_year}_Change_2015_%', f'{previous_year}_Change_2015_%'
                 ]
                 worksheet.update('A1:N1', [headers])
                 worksheet.format('A1:N1', {'textFormat': {'bold': True}})
@@ -1084,6 +1084,7 @@ def update_summary_table_historical_data(all_data):
         # Get current date info
         current_date = datetime.now()
         current_year = current_date.year
+        previous_year = current_year - 1
         current_month = current_date.month
         
         # Define source categories
@@ -1100,36 +1101,31 @@ def update_summary_table_historical_data(all_data):
             
             year_data = all_data[source_name]['year_data']
             
-            # Calculate YTD 2025
-            ytd_2025_gwh = 0
-            if 2025 in year_data:
+            # Calculate YTD current year
+            ytd_current_gwh = 0
+            if current_year in year_data:
                 for month in range(1, current_month + 1):
-                    month_value = year_data[2025].get(month, 0)
+                    month_value = year_data[current_year].get(month, 0)
                     if month < current_month:
                         # Full month - sheet already has monthly total
-                        ytd_2025_gwh += month_value
+                        ytd_current_gwh += month_value
                     else:
                         # Partial month - current month
                         current_day = current_date.day
-                        days_in_month = calendar.monthrange(2025, month)[1]
-                        ytd_2025_gwh += month_value * (current_day / days_in_month)
+                        days_in_month = calendar.monthrange(current_year, month)[1]
+                        ytd_current_gwh += month_value * (current_day / days_in_month)
             
-            # Calculate 2020-2024 average (annual)
-            period_totals = []
-            for year in range(2020, 2025):
-                if year in year_data:
-                    year_total = 0
-                    for month in range(1, 13):
-                        month_value = year_data[year].get(month, 0)
-                        # Sheet already has monthly total, just sum
-                        year_total += month_value
-                    period_totals.append(year_total)
-            
-            avg_2020_2024_gwh = sum(period_totals) / len(period_totals) if period_totals else 0
+            # Calculate previous year full year
+            year_previous_gwh = 0
+            if previous_year in year_data:
+                for month in range(1, 13):
+                    month_value = year_data[previous_year].get(month, 0)
+                    # Sheet already has monthly total, just sum
+                    year_previous_gwh += month_value
             
             source_calcs[source_name] = {
-                'ytd_2025_gwh': ytd_2025_gwh,
-                'avg_2020_2024_gwh': avg_2020_2024_gwh
+                'ytd_current_gwh': ytd_current_gwh,
+                'year_previous_gwh': year_previous_gwh
             }
         
         # Calculate 2015 baselines for change calculation
@@ -1157,7 +1153,7 @@ def update_summary_table_historical_data(all_data):
                     days_in_month = calendar.monthrange(2015, month)[1]
                     ytd_baseline += month_value * (current_day / days_in_month)
             
-            # 2020-2024 baseline: Full year 2015
+            # 2015 full year baseline (for comparing to 2024)
             year_2015_total = 0
             for month in range(1, 13):
                 month_value = year_data[2015].get(month, 0)
@@ -1176,81 +1172,73 @@ def update_summary_table_historical_data(all_data):
             renewables_year_data = all_data['All Renewables']['year_data']
             
             renewables_ytd = 0
-            if 2025 in renewables_year_data:
+            if current_year in renewables_year_data:
                 for month in range(1, current_month + 1):
-                    month_value = renewables_year_data[2025].get(month, 0)
+                    month_value = renewables_year_data[current_year].get(month, 0)
                     if month < current_month:
                         # Full month - sheet already has monthly total
                         renewables_ytd += month_value
                     else:
                         # Partial month - current month
                         current_day = current_date.day
-                        days_in_month = calendar.monthrange(2025, month)[1]
+                        days_in_month = calendar.monthrange(current_year, month)[1]
                         renewables_ytd += month_value * (current_day / days_in_month)
             
-            period_totals = []
-            for year in range(2020, 2025):
-                if year in renewables_year_data:
-                    year_total = 0
-                    for month in range(1, 13):
-                        month_value = renewables_year_data[year].get(month, 0)
-                        # Sheet already has monthly total, just sum
-                        year_total += month_value
-                    period_totals.append(year_total)
-            
-            renewables_avg = sum(period_totals) / len(period_totals) if period_totals else 0
+            # Get previous year full year
+            renewables_previous = 0
+            if previous_year in renewables_year_data:
+                for month in range(1, 13):
+                    month_value = renewables_year_data[previous_year].get(month, 0)
+                    # Sheet already has monthly total, just sum
+                    renewables_previous += month_value
         else:
             # Fallback: sum individual sources
-            renewables_ytd = sum(source_calcs[s]['ytd_2025_gwh'] for s in renewables if s in source_calcs)
-            renewables_avg = sum(source_calcs[s]['avg_2020_2024_gwh'] for s in renewables if s in source_calcs)
+            renewables_ytd = sum(source_calcs[s]['ytd_current_gwh'] for s in renewables if s in source_calcs)
+            renewables_previous = sum(source_calcs[s]['year_previous_gwh'] for s in renewables if s in source_calcs)
         
         # Calculate All Non-Renewables from Total Generation - All Renewables
         # This ensures they sum to exactly 100%
         if 'Total Generation' in all_data:
             total_year_data = all_data['Total Generation']['year_data']
             
-            # YTD 2025 total
+            # YTD current year total
             total_ytd = 0
-            if 2025 in total_year_data:
+            if current_year in total_year_data:
                 for month in range(1, current_month + 1):
-                    month_value = total_year_data[2025].get(month, 0)
+                    month_value = total_year_data[current_year].get(month, 0)
                     if month < current_month:
                         # Full month - sheet already has monthly total
                         total_ytd += month_value
                     else:
                         # Partial month - current month
                         current_day = current_date.day
-                        days_in_month = calendar.monthrange(2025, month)[1]
+                        days_in_month = calendar.monthrange(current_year, month)[1]
                         total_ytd += month_value * (current_day / days_in_month)
             
             non_renewables_ytd = total_ytd - renewables_ytd
             
-            # 2020-2024 average total
-            period_totals = []
-            for year in range(2020, 2025):
-                if year in total_year_data:
-                    year_total = 0
-                    for month in range(1, 13):
-                        month_value = total_year_data[year].get(month, 0)
-                        # Sheet already has monthly total, just sum
-                        year_total += month_value
-                    period_totals.append(year_total)
+            # Get previous year full year
+            total_previous = 0
+            if previous_year in total_year_data:
+                for month in range(1, 13):
+                    month_value = total_year_data[previous_year].get(month, 0)
+                    # Sheet already has monthly total, just sum
+                    total_previous += month_value
             
-            total_avg = sum(period_totals) / len(period_totals) if period_totals else 0
-            non_renewables_avg = total_avg - renewables_avg
+            non_renewables_previous = total_previous - renewables_previous
         else:
             # Fallback: sum individual sources
-            non_renewables_ytd = sum(source_calcs[s]['ytd_2025_gwh'] for s in non_renewables if s in source_calcs)
-            non_renewables_avg = sum(source_calcs[s]['avg_2020_2024_gwh'] for s in non_renewables if s in source_calcs)
+            non_renewables_ytd = sum(source_calcs[s]['ytd_current_gwh'] for s in non_renewables if s in source_calcs)
+            non_renewables_previous = sum(source_calcs[s]['year_previous_gwh'] for s in non_renewables if s in source_calcs)
         
         source_calcs['All Renewables'] = {
-            'ytd_2025_gwh': renewables_ytd,
-            'avg_2020_2024_gwh': renewables_avg
+            'ytd_current_gwh': renewables_ytd,
+            'year_previous_gwh': renewables_previous
         }
         
         source_calcs['All Non-Renewables'] = {
-            'ytd_2025_gwh': non_renewables_ytd,
-            'avg_2020_2024_gwh': non_renewables_avg
+            'ytd_current_gwh': non_renewables_ytd,
+            'year_previous_gwh': non_renewables_previous
         }
         
         # Add 2015 baselines for aggregates
@@ -1326,74 +1314,70 @@ def update_summary_table_historical_data(all_data):
             if source_name not in source_calcs:
                 continue
             
-            ytd_2025_gwh = source_calcs[source_name]['ytd_2025_gwh']
-            avg_2020_2024_gwh = source_calcs[source_name]['avg_2020_2024_gwh']
+            ytd_current_gwh = source_calcs[source_name]['ytd_current_gwh']
+            year_previous_gwh = source_calcs[source_name]['year_previous_gwh']
             
             # Calculate total generation for percentages
-            ytd_2025_pct = 0
-            avg_2020_2024_pct = 0
+            ytd_current_pct = 0
+            year_previous_pct = 0
             
             if 'Total Generation' in all_data:
                 total_year_data = all_data['Total Generation']['year_data']
                 
-                # YTD 2025 percentage
-                ytd_2025_total = 0
-                if 2025 in total_year_data:
+                # YTD current year percentage
+                ytd_current_total = 0
+                if current_year in total_year_data:
                     for month in range(1, current_month + 1):
-                        month_value = total_year_data[2025].get(month, 0)
+                        month_value = total_year_data[current_year].get(month, 0)
                         if month < current_month:
                             # Full month - sheet already has monthly total
-                            ytd_2025_total += month_value
+                            ytd_current_total += month_value
                         else:
                             # Partial month
                             current_day = current_date.day
-                            days_in_month = calendar.monthrange(2025, month)[1]
-                            ytd_2025_total += month_value * (current_day / days_in_month)
+                            days_in_month = calendar.monthrange(current_year, month)[1]
+                            ytd_current_total += month_value * (current_day / days_in_month)
                 
-                ytd_2025_pct = (ytd_2025_gwh / ytd_2025_total * 100) if ytd_2025_total > 0 else 0
+                ytd_current_pct = (ytd_current_gwh / ytd_current_total * 100) if ytd_current_total > 0 else 0
                 
-                # 2020-2024 average percentage
-                period_total_gen = []
-                for year in range(2020, 2025):
-                    if year in total_year_data:
-                        year_total_gen = 0
-                        for month in range(1, 13):
-                            month_value = total_year_data[year].get(month, 0)
-                            # Sheet already has monthly total, just sum
-                            year_total_gen += month_value
-                        period_total_gen.append(year_total_gen)
+                # Previous year full year percentage
+                year_previous_total = 0
+                if previous_year in total_year_data:
+                    for month in range(1, 13):
+                        month_value = total_year_data[previous_year].get(month, 0)
+                        # Sheet already has monthly total, just sum
+                        year_previous_total += month_value
                 
-                avg_total_gen = sum(period_total_gen) / len(period_total_gen) if period_total_gen else 0
-                avg_2020_2024_pct = (avg_2020_2024_gwh / avg_total_gen * 100) if avg_total_gen > 0 else 0
+                year_previous_pct = (year_previous_gwh / year_previous_total * 100) if year_previous_total > 0 else 0
             
             # Calculate change from 2015
             ytd_change_2015 = ''
-            avg_change_2015 = ''
+            year_previous_change_2015 = ''
             
             if source_name in baselines_2015:
-                # YTD 2025 change from 2015
+                # YTD current year change from 2015
                 baseline_ytd = baselines_2015[source_name]['ytd']
                 if baseline_ytd > 0:
-                    change = (ytd_2025_gwh - baseline_ytd) / baseline_ytd * 100
+                    change = (ytd_current_gwh - baseline_ytd) / baseline_ytd * 100
                     ytd_change_2015 = format_change_percentage(change)
                 
-                # 2020-2024 change from 2015
+                # Previous year full year change from 2015
                 baseline_year = baselines_2015[source_name]['year']
                 if baseline_year > 0:
-                    change = (avg_2020_2024_gwh - baseline_year) / baseline_year * 100
-                    avg_change_2015 = format_change_percentage(change)
+                    change = (year_previous_gwh - baseline_year) / baseline_year * 100
+                    year_previous_change_2015 = format_change_percentage(change)
             
             # Add to updates list (columns F, G, H, I, M, N)
             updates.append({
                 'range_fghi': f'F{row_idx}:I{row_idx}',
                 'values_fghi': [[
-                    f"{ytd_2025_gwh:.1f}",
-                    f"{ytd_2025_pct:.2f}",
-                    f"{avg_2020_2024_gwh:.1f}",
-                    f"{avg_2020_2024_pct:.2f}"
+                    f"{ytd_current_gwh:.1f}",
+                    f"{ytd_current_pct:.2f}",
+                    f"{year_previous_gwh:.1f}",
+                    f"{year_previous_pct:.2f}"
                 ]],
                 'range_mn': f'M{row_idx}:N{row_idx}',
-                'values_mn': [[ytd_change_2015, avg_change_2015]]
+                'values_mn': [[ytd_change_2015, year_previous_change_2015]]
             })
         
         # Batch update all rows at once
@@ -1402,7 +1386,7 @@ def update_summary_table_historical_data(all_data):
                 worksheet.update(update['range_fghi'], update['values_fghi'])
                 worksheet.update(update['range_mn'], update['values_mn'])
             
-            print(f"✓ Updated {len(updates)} sources with YTD 2025 and 2020-2024 data (columns F-I, M-N)")
+            print(f"✓ Updated {len(updates)} sources with YTD {current_year} and {previous_year} data (columns F-I, M-N)")
             
             # Update timestamp in last column
             timestamp = current_date.strftime('%Y-%m-%d %H:%M UTC')
