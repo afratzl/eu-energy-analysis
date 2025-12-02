@@ -1050,6 +1050,12 @@ def update_summary_table_historical_data(all_data):
         spreadsheet = gc.open('EU Electricity Production Data')
         print("✓ Connected to spreadsheet")
         
+        # Get current date info (needed for headers)
+        current_date = datetime.now()
+        current_year = current_date.year
+        previous_year = current_year - 1
+        current_month = current_date.month
+        
         # Get the Summary Table Data worksheet
         try:
             worksheet = spreadsheet.worksheet('Summary Table Data')
@@ -1082,12 +1088,6 @@ def update_summary_table_historical_data(all_data):
         except gspread.WorksheetNotFound:
             print("⚠ 'Summary Table Data' worksheet not found - run intraday analysis first")
             return
-        
-        # Get current date info
-        current_date = datetime.now()
-        current_year = current_date.year
-        previous_year = current_year - 1
-        current_month = current_date.month
         
         # Define source categories
         renewables = ['Solar', 'Wind', 'Hydro', 'Biomass', 'Geothermal']
