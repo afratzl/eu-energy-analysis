@@ -1054,6 +1054,7 @@ def update_summary_table_historical_data(all_data):
         current_date = datetime.now()
         current_year = current_date.year
         previous_year = current_year - 1
+        two_years_ago = current_year - 2
         current_month = current_date.month
         
         # Get the Summary Table Data worksheet
@@ -1061,29 +1062,31 @@ def update_summary_table_historical_data(all_data):
             worksheet = spreadsheet.worksheet('Summary Table Data')
             print("✓ Found 'Summary Table Data' worksheet")
             
-            # Check if worksheet has enough columns (need 18: A-R)
-            if worksheet.col_count < 18:
-                print(f"  Expanding worksheet from {worksheet.col_count} to 18 columns...")
-                worksheet.resize(rows=worksheet.row_count, cols=18)
+            # Check if worksheet has enough columns (need 22: A-V)
+            if worksheet.col_count < 22:
+                print(f"  Expanding worksheet from {worksheet.col_count} to 22 columns...")
+                worksheet.resize(rows=worksheet.row_count, cols=22)
                 print("  ✓ Worksheet expanded")
-                
-                # Update header row with new columns
-                print("  Updating header row...")
-                headers = [
-                    'Source', 
-                    'Yesterday_GWh', 'Yesterday_%', 
-                    'LastWeek_GWh', 'LastWeek_%',
-                    f'YTD{current_year}_GWh', f'YTD{current_year}_%',
-                    f'{previous_year}_GWh', f'{previous_year}_%',
-                    'Last_Updated',
-                    'Yesterday_Change_2015_%', 'LastWeek_Change_2015_%',
-                    f'YTD{current_year}_Change_2015_%', f'{previous_year}_Change_2015_%',
-                    f'Yesterday_Change_{previous_year}_%', f'LastWeek_Change_{previous_year}_%',
-                    f'YTD{current_year}_Change_{previous_year}_%', f'{previous_year}_Change_{previous_year}_%'
-                ]
-                worksheet.update('A1:R1', [headers])
-                worksheet.format('A1:R1', {'textFormat': {'bold': True}})
-                print("  ✓ Header row updated")
+            
+            # Always update header row to ensure consistency
+            print("  Updating header row...")
+            headers = [
+                'Source', 
+                'Yesterday_GWh', 'Yesterday_%', 
+                'LastWeek_GWh', 'LastWeek_%',
+                f'YTD{current_year}_GWh', f'YTD{current_year}_%',
+                f'{previous_year}_GWh', f'{previous_year}_%',
+                'Last_Updated',
+                'Yesterday_Change_2015_%', 'LastWeek_Change_2015_%',
+                f'YTD{current_year}_Change_2015_%', f'{previous_year}_Change_2015_%',
+                f'Yesterday_Change_{previous_year}_%', f'LastWeek_Change_{previous_year}_%',
+                f'YTD{current_year}_Change_{previous_year}_%', f'{previous_year}_Change_{previous_year}_%',
+                f'Yesterday_Change_{two_years_ago}_%', f'LastWeek_Change_{two_years_ago}_%',
+                f'YTD{current_year}_Change_{two_years_ago}_%', f'{previous_year}_Change_{two_years_ago}_%'
+            ]
+            worksheet.update('A1:V1', [headers])
+            worksheet.format('A1:V1', {'textFormat': {'bold': True}})
+            print("  ✓ Header row updated")
                 
         except gspread.WorksheetNotFound:
             print("⚠ 'Summary Table Data' worksheet not found - run intraday analysis first")
@@ -1561,6 +1564,167 @@ def update_summary_table_historical_data(all_data):
                     worksheet.update(update['range'], update['values'])
                 
                 print(f"✓ Updated {len(change_updates)} sources with changes from {previous_year} (columns O-R)")
+            
+            # ===================================================================
+            # Calculate changes from 2 years ago (e.g., 2023)
+            # Same logic as previous year changes
+            # ===================================================================
+            print(f"\nCalculating changes from {two_years_ago}...")
+            
+            # Prepare updates for change from 2 years ago columns
+            change_2ya_updates = []
+            
+            for row_idx, row_data in enumerate(summary_data, start=2):
+                source_name = row_data[0]
+                
+                try:
+                    yesterday_gwh = float(row_data[1]) if len(row_data) > 1 and row_data[1] else 0
+                    lastweek_gwh = float(row_data[3]) if len(row_data) > 3 and row_data[3] else 0
+                except (ValueError, IndexError):
+                    yesterday_gwh = 0
+                    lastweek_gwh = 0
+                
+                # Get YTD and full year values from source_calcs
+                if source_name not in source_calcs:
+                    change_2ya_updates.append({
+                        'range': f'S{row_idx}:V{row_idx}',
+                        'values': [['', '', '', '']]
+                    })
+                    continue
+                
+                ytd_current_gwh = source_calcs[source_name]['ytd_current_gwh']
+                year_previous_gwh = source_calcs[source_name]['year_previous_gwh']
+                
+                # Get December (current month) from 2 years ago from monthly sheets
+                current_month_2ya_gwh = 0
+                if source_name in ['All Renewables', 'All Non-Renewables']:
+                    # For aggregates, need to calculate
+                    if source_name == 'All Renewables' and 'All Renewables' in all_data:
+                        renewables_year_data = all_data['All Renewables']['year_data']
+                        if two_years_ago in renewables_year_data:
+                            current_month_2ya_gwh = renewables_year_data[two_years_ago].get(current_month, 0)
+                    elif source_name == 'All Non-Renewables' and 'Total Generation' in all_data:
+                        total_year_data = all_data['Total Generation']['year_data']
+                        renewables_year_data = all_data.get('All Renewables', {}).get('year_data', {})
+                        if two_years_ago in total_year_data and two_years_ago in renewables_year_data:
+                            total_month = total_year_data[two_years_ago].get(current_month, 0)
+                            renewables_month = renewables_year_data[two_years_ago].get(current_month, 0)
+                            current_month_2ya_gwh = total_month - renewables_month
+                elif source_name in all_data:
+                    # Get from monthly data
+                    year_data = all_data[source_name]['year_data']
+                    if two_years_ago in year_data:
+                        current_month_2ya_gwh = year_data[two_years_ago].get(current_month, 0)
+                
+                # Get full year 2 years ago
+                year_2ya_gwh = 0
+                if source_name in ['All Renewables', 'All Non-Renewables']:
+                    # For aggregates
+                    if source_name == 'All Renewables' and 'All Renewables' in all_data:
+                        renewables_year_data = all_data['All Renewables']['year_data']
+                        if two_years_ago in renewables_year_data:
+                            for month in range(1, 13):
+                                year_2ya_gwh += renewables_year_data[two_years_ago].get(month, 0)
+                    elif source_name == 'All Non-Renewables' and 'Total Generation' in all_data:
+                        total_year_data = all_data['Total Generation']['year_data']
+                        renewables_year_data = all_data.get('All Renewables', {}).get('year_data', {})
+                        if two_years_ago in total_year_data and two_years_ago in renewables_year_data:
+                            total_2ya = sum(total_year_data[two_years_ago].get(m, 0) for m in range(1, 13))
+                            renewables_2ya = sum(renewables_year_data[two_years_ago].get(m, 0) for m in range(1, 13))
+                            year_2ya_gwh = total_2ya - renewables_2ya
+                elif source_name in all_data:
+                    year_data = all_data[source_name]['year_data']
+                    if two_years_ago in year_data:
+                        for month in range(1, 13):
+                            year_2ya_gwh += year_data[two_years_ago].get(month, 0)
+                
+                # Calculate changes
+                yesterday_change_2ya = ''
+                lastweek_change_2ya = ''
+                ytd_change_2ya = ''
+                year_prev_change_2ya = ''
+                
+                # Yesterday change: compare to average day in December 2 years ago
+                if current_month_2ya_gwh > 0:
+                    days_in_current_month = calendar.monthrange(two_years_ago, current_month)[1]
+                    avg_day_2ya = current_month_2ya_gwh / days_in_current_month
+                    if avg_day_2ya > 0 and yesterday_gwh > 0:
+                        change = (yesterday_gwh - avg_day_2ya) / avg_day_2ya * 100
+                        yesterday_change_2ya = format_change_percentage(change)
+                
+                # LastWeek change: compare to average week in December 2 years ago
+                if current_month_2ya_gwh > 0:
+                    days_in_current_month = calendar.monthrange(two_years_ago, current_month)[1]
+                    avg_week_2ya = (current_month_2ya_gwh / days_in_current_month) * 7
+                    if avg_week_2ya > 0 and lastweek_gwh > 0:
+                        change = (lastweek_gwh - avg_week_2ya) / avg_week_2ya * 100
+                        lastweek_change_2ya = format_change_percentage(change)
+                
+                # YTD change: compare to same period in 2 years ago
+                ytd_2ya = 0
+                if source_name in ['All Renewables', 'All Non-Renewables']:
+                    if source_name == 'All Renewables' and 'All Renewables' in all_data:
+                        renewables_year_data = all_data['All Renewables']['year_data']
+                        if two_years_ago in renewables_year_data:
+                            for month in range(1, current_month + 1):
+                                month_value = renewables_year_data[two_years_ago].get(month, 0)
+                                if month < current_month:
+                                    ytd_2ya += month_value
+                                else:
+                                    current_day = current_date.day
+                                    days_in_month = calendar.monthrange(two_years_ago, month)[1]
+                                    ytd_2ya += month_value * (current_day / days_in_month)
+                    elif source_name == 'All Non-Renewables' and 'Total Generation' in all_data:
+                        total_year_data = all_data['Total Generation']['year_data']
+                        renewables_year_data = all_data.get('All Renewables', {}).get('year_data', {})
+                        if two_years_ago in total_year_data and two_years_ago in renewables_year_data:
+                            ytd_total_2ya = 0
+                            ytd_renewables_2ya = 0
+                            for month in range(1, current_month + 1):
+                                month_total = total_year_data[two_years_ago].get(month, 0)
+                                month_renewables = renewables_year_data[two_years_ago].get(month, 0)
+                                if month < current_month:
+                                    ytd_total_2ya += month_total
+                                    ytd_renewables_2ya += month_renewables
+                                else:
+                                    current_day = current_date.day
+                                    days_in_month = calendar.monthrange(two_years_ago, month)[1]
+                                    ytd_total_2ya += month_total * (current_day / days_in_month)
+                                    ytd_renewables_2ya += month_renewables * (current_day / days_in_month)
+                            ytd_2ya = ytd_total_2ya - ytd_renewables_2ya
+                elif source_name in all_data:
+                    year_data = all_data[source_name]['year_data']
+                    if two_years_ago in year_data:
+                        for month in range(1, current_month + 1):
+                            month_value = year_data[two_years_ago].get(month, 0)
+                            if month < current_month:
+                                ytd_2ya += month_value
+                            else:
+                                current_day = current_date.day
+                                days_in_month = calendar.monthrange(two_years_ago, month)[1]
+                                ytd_2ya += month_value * (current_day / days_in_month)
+                
+                if ytd_2ya > 0 and ytd_current_gwh > 0:
+                    change = (ytd_current_gwh - ytd_2ya) / ytd_2ya * 100
+                    ytd_change_2ya = format_change_percentage(change)
+                
+                # Previous year (2024) change: compare 2024 to 2023
+                if year_2ya_gwh > 0 and year_previous_gwh > 0:
+                    change = (year_previous_gwh - year_2ya_gwh) / year_2ya_gwh * 100
+                    year_prev_change_2ya = format_change_percentage(change)
+                
+                # Add to change updates list
+                change_2ya_updates.append({
+                    'range': f'S{row_idx}:V{row_idx}',
+                    'values': [[yesterday_change_2ya, lastweek_change_2ya, ytd_change_2ya, year_prev_change_2ya]]
+                })
+            
+            # Write all change from 2 years ago values
+            if change_2ya_updates:
+                for update in change_2ya_updates:
+                    worksheet.update(update['range'], update['values'])
+                
+                print(f"✓ Updated {len(change_2ya_updates)} sources with changes from {two_years_ago} (columns S-V)")
             
             print(f"   Worksheet: {spreadsheet.url}")
         else:
