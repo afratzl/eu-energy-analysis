@@ -119,6 +119,9 @@
                     <button id="toggle-change" class="toggle-btn-pro" onclick="showChange()">
                         Change from 2015
                     </button>
+                    <button id="toggle-change-2023" class="toggle-btn-pro" onclick="showChangeTwoYearsAgo()">
+                        <span id="change-two-years-ago-label">Change from 2 Years Ago</span>
+                    </button>
                 </div>
             </div>
 
@@ -163,6 +166,7 @@
         // Dynamic year calculation
         const currentYear = new Date().getFullYear();
         const previousYear = currentYear - 1;
+        const twoYearsAgo = currentYear - 2;
         
         // Load summary data (timestamp + table) - single fetch
         function loadSummaryData() {
@@ -216,6 +220,7 @@
                     <span class="value-abs" style="display:none">${source.yesterday.twh} TWh</span>
                     <span class="value-change" style="display:none">${source.yesterday.change_from_2015}</span>
                     <span class="value-change-2024" style="display:none">${source.yesterday.change_from_2024}</span>
+                    <span class="value-change-2023" style="display:none">${source.yesterday.change_from_2023}</span>
                 </td>`;
                 
                 // Last Week
@@ -224,6 +229,7 @@
                     <span class="value-abs" style="display:none">${source.last_week.twh} TWh</span>
                     <span class="value-change" style="display:none">${source.last_week.change_from_2015}</span>
                     <span class="value-change-2024" style="display:none">${source.last_week.change_from_2024}</span>
+                    <span class="value-change-2023" style="display:none">${source.last_week.change_from_2023}</span>
                 </td>`;
                 
                 // YTD Current Year - Display in TWh
@@ -232,6 +238,7 @@
                     <span class="value-abs" style="display:none">${source.ytd_2025.twh.toFixed(2)} TWh</span>
                     <span class="value-change" style="display:none">${source.ytd_2025.change_from_2015}</span>
                     <span class="value-change-2024" style="display:none">${source.ytd_2025.change_from_2024}</span>
+                    <span class="value-change-2023" style="display:none">${source.ytd_2025.change_from_2023}</span>
                 </td>`;
                 
                 // Previous Year - Display in TWh
@@ -240,6 +247,7 @@
                     <span class="value-abs" style="display:none">${source.year_2024.twh.toFixed(2)} TWh</span>
                     <span class="value-change" style="display:none">${source.year_2024.change_from_2015}</span>
                     <span class="value-change-2024" style="display:none">${source.year_2024.change_from_2024}</span>
+                    <span class="value-change-2023" style="display:none">${source.year_2024.change_from_2023}</span>
                 </td>`;
                 
                 html += '</tr>';
@@ -257,11 +265,13 @@
             document.querySelectorAll('.value-abs').forEach(el => el.style.display = 'none');
             document.querySelectorAll('.value-change').forEach(el => el.style.display = 'none');
             document.querySelectorAll('.value-change-2024').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.value-change-2023').forEach(el => el.style.display = 'none');
             
             document.getElementById('toggle-percentage').classList.add('active');
             document.getElementById('toggle-absolute').classList.remove('active');
             document.getElementById('toggle-change').classList.remove('active');
             document.getElementById('toggle-change-2024').classList.remove('active');
+            document.getElementById('toggle-change-2023').classList.remove('active');
             
             localStorage.setItem('electricityView', 'percentage');
         }
@@ -271,11 +281,13 @@
             document.querySelectorAll('.value-abs').forEach(el => el.style.display = 'inline');
             document.querySelectorAll('.value-change').forEach(el => el.style.display = 'none');
             document.querySelectorAll('.value-change-2024').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.value-change-2023').forEach(el => el.style.display = 'none');
             
             document.getElementById('toggle-percentage').classList.remove('active');
             document.getElementById('toggle-absolute').classList.add('active');
             document.getElementById('toggle-change').classList.remove('active');
             document.getElementById('toggle-change-2024').classList.remove('active');
+            document.getElementById('toggle-change-2023').classList.remove('active');
             
             localStorage.setItem('electricityView', 'absolute');
         }
@@ -285,11 +297,13 @@
             document.querySelectorAll('.value-abs').forEach(el => el.style.display = 'none');
             document.querySelectorAll('.value-change').forEach(el => el.style.display = 'inline');
             document.querySelectorAll('.value-change-2024').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.value-change-2023').forEach(el => el.style.display = 'none');
             
             document.getElementById('toggle-percentage').classList.remove('active');
             document.getElementById('toggle-absolute').classList.remove('active');
             document.getElementById('toggle-change').classList.add('active');
             document.getElementById('toggle-change-2024').classList.remove('active');
+            document.getElementById('toggle-change-2023').classList.remove('active');
             
             localStorage.setItem('electricityView', 'change');
         }
@@ -299,19 +313,38 @@
             document.querySelectorAll('.value-abs').forEach(el => el.style.display = 'none');
             document.querySelectorAll('.value-change').forEach(el => el.style.display = 'none');
             document.querySelectorAll('.value-change-2024').forEach(el => el.style.display = 'inline');
+            document.querySelectorAll('.value-change-2023').forEach(el => el.style.display = 'none');
             
             document.getElementById('toggle-percentage').classList.remove('active');
             document.getElementById('toggle-absolute').classList.remove('active');
             document.getElementById('toggle-change').classList.remove('active');
             document.getElementById('toggle-change-2024').classList.add('active');
+            document.getElementById('toggle-change-2023').classList.remove('active');
             
             localStorage.setItem('electricityView', 'changePreviousYear');
         }
 
+        function showChangeTwoYearsAgo() {
+            document.querySelectorAll('.value-pct').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.value-abs').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.value-change').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.value-change-2024').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.value-change-2023').forEach(el => el.style.display = 'inline');
+            
+            document.getElementById('toggle-percentage').classList.remove('active');
+            document.getElementById('toggle-absolute').classList.remove('active');
+            document.getElementById('toggle-change').classList.remove('active');
+            document.getElementById('toggle-change-2024').classList.remove('active');
+            document.getElementById('toggle-change-2023').classList.add('active');
+            
+            localStorage.setItem('electricityView', 'changeTwoYearsAgo');
+        }
+
         // Load on page load
         window.addEventListener('DOMContentLoaded', () => {
-            // Update toggle button label with actual previous year
+            // Update toggle button labels with actual years
             document.getElementById('change-previous-year-label').textContent = `Change from ${previousYear}`;
+            document.getElementById('change-two-years-ago-label').textContent = `Change from ${twoYearsAgo}`;
             
             loadSummaryData();  // Single fetch for both timestamp and table
             
@@ -324,6 +357,8 @@
             } else if (preference === 'changePreviousYear' || preference === 'change2024') {
                 // Support both new and old localStorage values for backwards compatibility
                 showChangePreviousYear();
+            } else if (preference === 'changeTwoYearsAgo') {
+                showChangeTwoYearsAgo();
             }
         });
     </script>
