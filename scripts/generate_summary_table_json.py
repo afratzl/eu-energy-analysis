@@ -123,6 +123,12 @@ def generate_summary_json():
             ytd2025_change_2024 = safe_string(row[16]) if len(row) > 16 else ""
             year2024_change_2024 = safe_string(row[17]) if len(row) > 17 else ""
             
+            # Change from 2023 (columns S-V)
+            yesterday_change_2023 = safe_string(row[18]) if len(row) > 18 else ""
+            lastweek_change_2023 = safe_string(row[19]) if len(row) > 19 else ""
+            ytd2025_change_2023 = safe_string(row[20]) if len(row) > 20 else ""
+            year2024_change_2023 = safe_string(row[21]) if len(row) > 21 else ""
+            
             # Convert GWh to TWh for better readability
             yesterday_twh = yesterday_gwh / 1000
             lastweek_twh = lastweek_gwh / 1000
@@ -137,28 +143,32 @@ def generate_summary_json():
                     "twh": round(yesterday_twh, 2),
                     "percentage": round(yesterday_pct, 2),
                     "change_from_2015": yesterday_change,
-                    "change_from_2024": yesterday_change_2024
+                    "change_from_2024": yesterday_change_2024,
+                    "change_from_2023": yesterday_change_2023
                 },
                 "last_week": {
                     "gwh": round(lastweek_gwh, 1),
                     "twh": round(lastweek_twh, 2),
                     "percentage": round(lastweek_pct, 2),
                     "change_from_2015": lastweek_change,
-                    "change_from_2024": lastweek_change_2024
+                    "change_from_2024": lastweek_change_2024,
+                    "change_from_2023": lastweek_change_2023
                 },
                 "ytd_2025": {
                     "gwh": round(ytd2025_gwh, 1),
                     "twh": round(ytd2025_twh, 2),
                     "percentage": round(ytd2025_pct, 2),
                     "change_from_2015": ytd2025_change,
-                    "change_from_2024": ytd2025_change_2024
+                    "change_from_2024": ytd2025_change_2024,
+                    "change_from_2023": ytd2025_change_2023
                 },
                 "year_2024": {
                     "gwh": round(year2024_gwh, 1),
                     "twh": round(year2024_twh, 2),
                     "percentage": round(year2024_pct, 2),
                     "change_from_2015": year2024_change,
-                    "change_from_2024": year2024_change_2024
+                    "change_from_2024": year2024_change_2024,
+                    "change_from_2023": year2024_change_2023
                 }
             }
             
