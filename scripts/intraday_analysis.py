@@ -226,7 +226,17 @@ def interpolate_country_data(country_series, country_name, mark_extrapolated=Fal
 
     if most_common_interval >= 45:  # Hourly
         interpolated = country_series.reindex(complete_index)
-        interpolated = interpolated.interpolate(method='cubic', limit_area='inside')
+        
+        # Try cubic interpolation, fall back to linear if not enough points
+        try:
+            interpolated = interpolated.interpolate(method='cubic', limit_area='inside')
+        except ValueError as e:
+            # Cubic needs at least 4 points; fall back to linear for sparse data
+            if "derivatives at boundaries" in str(e):
+                interpolated = interpolated.interpolate(method='linear', limit_area='inside')
+            else:
+                raise
+        
         interpolated = interpolated.fillna(method='ffill').fillna(method='bfill')
 
         if mark_extrapolated:
