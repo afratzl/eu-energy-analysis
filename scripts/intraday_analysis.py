@@ -63,6 +63,10 @@ import json
 
 warnings.filterwarnings('ignore')
 
+# Force unbuffered output for real-time progress display
+import functools
+print = functools.partial(print, flush=True)
+
 # Google Sheets imports (lazy loaded to avoid errors if not installed)
 try:
     import gspread
