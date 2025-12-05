@@ -1,9 +1,5 @@
 {
-<<<<<<< Updated upstream
-  "last_updated": "2025-12-05 20:50:13 UTC",
-=======
-  "last_updated": "2025-12-05 21:42:19 UTC",
->>>>>>> Stashed changes
+  "last_updated": "2025-12-05 21:46:19 UTC",
   "sources": [
     {
       "source": "All Renewables",
@@ -121,11 +117,7 @@
         "twh": 0.16,
         "percentage": 1.96,
         "change_from_2015": "+75%",
-<<<<<<< Updated upstream
-        "change_from_2024": "-33%",
-=======
         "change_from_2024": "-34%",
->>>>>>> Stashed changes
         "change_from_2023": "-13%"
       },
       "last_week": {
